@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
 
 from app.core.config import settings
 
@@ -19,6 +20,14 @@ SeesionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+
+class TimestampMixin:
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 def get_db():
