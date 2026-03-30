@@ -21,20 +21,6 @@ class HighlightType(str, enum.Enum):
     carbs = "carbs"  # risk / 당뇨
 
 
-# 1. Refresh Token 저장
-#    → 로그아웃 시 토큰 무효화 필요
-#    → DB에 저장하면 매 요청마다 DB 조회 → 느림
-#    → Redis에 저장하면 빠름
-
-# 2. Rate Limiting
-#    → API 요청 횟수 제한 (재측정 하루 1회 등)
-#    → POST /predict 하루 1회 제한
-
-# 3. 캐싱
-#    → GET /health/dashboard 집계 쿼리 → 매번 계산 비용 큼
-#    → Redis 캐싱으로 빠르게
-
-
 class DietLog(Base):
     __tablename___ = "diet_logs"
 
