@@ -43,7 +43,7 @@ main (1명 승인 + CI 통과)
 ## 커밋 메시지 컨벤션
 
 ```
-feat: JWT 인증 구현
+feature: JWT 인증 구현
 fix: 토큰 만료 처리 버그 수정
 docs: API 명세서 업데이트
 refactor: 챌린지 서비스 리팩토링
