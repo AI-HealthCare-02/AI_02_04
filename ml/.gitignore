@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pkl
+*.db
+*.csv
+saved_models/
+.vscode/

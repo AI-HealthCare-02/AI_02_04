@@ -45,4 +45,4 @@ jobs:
           ALGORITHM: HS256
 
       - name: Docker build check
-        run: docker build -t 파일명 미정:${{ github.sha }} .
+        run: docker build -t dangmagochi-backend:${{ github.sha }} .
