@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 
-from app.core.database import Base
+from app.core.database import Base, TimestampMixin
 
 
 class CharacterStatus(str, enum.Enum):
@@ -66,10 +66,9 @@ class Character(Base):
     history = relationship("CharacterHistory", back_populates="character")
 
 
-class CharacterCollection(Base):
+class CharacterCollection(Base, TimestampMixin):
     __tablename__ = "character_collections"
 
-    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     character_id = Column(Integer, ForeignKey("characters.id"), nullable=False)
 
@@ -80,15 +79,12 @@ class CharacterCollection(Base):
     period_end = Column(DateTime, nullable=False)
     graduated_at = Column(DateTime, nullable=False)
 
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-
     character = relationship("Character", back_populates="collection")
 
 
-class CharacterHistory(Base):
+class CharacterHistory(Base, TimestampMixin):
     __tablename__ = "character_history"
 
-    id = Column(Integer, primary_key=True, index=True)
     character_id = Column(
         Integer, ForeignKey("characters.id"), nullable=False, index=True
     )

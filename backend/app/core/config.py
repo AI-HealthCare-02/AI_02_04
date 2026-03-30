@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     MLFLOW_TRACKING_URI: str = "http://localhost:5001"
 
-    class Confing:
+    class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
 

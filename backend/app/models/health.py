@@ -8,12 +8,11 @@ from sqlalchemy import (
     Enum,
     String,
 )
-
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 
-from app.core.database import Base
+from app.core.database import Base, TimestampMixin
 
 
 class GlucoseType(str, enum.Enum):
@@ -21,10 +20,9 @@ class GlucoseType(str, enum.Enum):
     postprandial = "postprandial"
 
 
-class HealthRecord:
+class HealthRecord(Base, TimestampMixin):
     __tablename__ = "health_records"
 
-    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     weight = Column(Float, nullable=True)
@@ -32,15 +30,13 @@ class HealthRecord:
     steps = Column(Integer, nullable=True)
 
     recorded_at = Column(DateTime, default=func.now(), nullable=False)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="health_records")
 
 
-class GlucoseLog(Base):
+class GlucoseLog(Base, TimestampMixin):
     __tablename__ = "glucose_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     glucose_level = Column(Float, nullable=False)
@@ -48,13 +44,18 @@ class GlucoseLog(Base):
     memo = Column(String(255), nullable=True)
 
     measured_at = Column(DateTime, default=func.now(), nullable=False)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="glucose_logs")
 
 
-class DiabetsPrediction(Base):
+class DiabetesPrediction(Base, TimestampMixin):
     __tablename__ = "diabetes_predictions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    risk_score = Column(Float, nullable=False)
+    risk_level = Column(String(10), nullable=False)
+    top_factors = Column(String(500), nullable=True)
+    is_improved = Column(Boolean, default=False)
+
+    user = relationship("User", back_populates="diabetes_predictions")

@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 
-from app.core.database import Base
+from app.core.database import Base, TimestampMixin
 
 
 class ChallengeType(str, enum.Enum):
@@ -78,10 +78,9 @@ class Challenge(Base):
 
 
 # 챌린지 로그
-class ChallengeLog(Base):
+class ChallengeLog(Base, TimestampMixin):
     __tablename__ = "challenge_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
     challenge_id = Column(
         Integer, ForeignKey("challenges.id"), nullable=False, index=True
     )
@@ -95,24 +94,28 @@ class ChallengeLog(Base):
     fail_reason = Column(Enum(FailReason), nullable=True)  # 실패 이유
     execution_time = Column(Enum(ExecutionTime), nullable=True)  # 실행 시간대
 
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-
     challenge = relationship("Challenge", back_populates="challenge_logs")
     user = relationship("User", back_populates="challenge_logs")
 
 
 # 포인트
-class Point(Base):
+class Point(Base, TimestampMixin):
     __tablename__ = "points"
 
-    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
 
     total_points = Column(Integer, default=0)
     this_week_earned = Column(Integer, default=0)  # 이번 주 획득 포인트
 
-    updated_at = Column(
-        DateTime, default=func.now(), onupdate=func.now(), nullable=False
-    )
-
     user = relationship("User", back_populates="points")
+
+
+class PointHistory(Base, TimestampMixin):
+    __tablename__ = "point_history"
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    amount = Column(Integer, nullable=False)
+    reason = Column(String(255), nullable=False)
+
+    user = relationship("User", back_populates="point_history")
