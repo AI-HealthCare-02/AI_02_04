@@ -20,17 +20,17 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     container_name: dangmago_backend
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/dangmago
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app  
+      - .:/app  
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       db:
