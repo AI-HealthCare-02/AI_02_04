@@ -29,39 +29,35 @@ class RiskLevel(str, enum.Enum):
     high = "high"
 
 
-class GenderType(str, enum.Enum):
-    male = "male"
-    female = "female"
-
-
 class User(Base):
     __tablename__ = "users"
 
     email = Column(String(255), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
+
     name = Column(String(100), nullable=False)
     age = Column(Integer, nullable=True)
-    sex = Column(Enum(GenderType), nullable=True)
+    sex = Column(Integer, nullable=True)
     height = Column(Float, nullable=True)
     weight = Column(Float, nullable=True)
+    bmi = Column(Float, nullable=True)
 
     user_type = Column(Enum(UserType), nullable=False, default=UserType.normal)
     goal = Column(Enum(GoalType), nullable=True)
     risk_level = Column(Enum(RiskLevel), nullable=True)
     diabetes_type = Column(Enum(DiabetesType), nullable=True)
-
-    high_bp = Column(Boolean, nullable=True)
-    high_chol = Column(Boolean, nullable=True)
-    heart_disease = Column(Boolean, nullable=True)
-    heavy_alcohol = Column(Boolean, nullable=True)
-    gen_hlth = Column(Integer, nullable=True)
-    diff_walk = Column(Boolean, nullable=True)
-
+    # 입력 피쳐입니다
+    is_hypertension = Column(Boolean, nullable=True)
+    is_cholesterol = Column(Boolean, nullable=True)
+    is_heart_disease = Column(Boolean, nullable=True)
+    walking_difficulty = Column(Boolean, nullable=True)
+    general_health = Column(Integer, nullable=True)
+    alcohol_status = Column(Boolean, nullable=True)
+    # llm 전용 피쳐입니다
     smoke_status = Column(String(50), nullable=True)
     exercise_freq = Column(String(50), nullable=True)
     fruit_intake = Column(String(50), nullable=True)
     veggie_intake = Column(String(50), nullable=True)
-    alcohol_status = Column(String(50), nullable=True)
     occupation = Column(String(100), nullable=True)
 
     isActive = Column(Boolean, defalut=True, nullable=False)
@@ -77,3 +73,5 @@ class User(Base):
     challenges = relationship("Challenge", back_populates="user")
     challenge_logs = relationship("ChallengeLog", back_populates="user")
     character = relationship("Character", back_populates="user", uselist=False)
+    points = relationship("Point", back_populates="user", uselist=False)
+    point_history = relationship("PointHistory", back_populates="user")
