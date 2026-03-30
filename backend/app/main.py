@@ -1,0 +1,26 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+
+
+app = FastAPI(
+    title="당마고치 API",
+    version="1.0.0",
+    docs_url="/docs" if settings.APP_ENV != "production" else None,
+    redoc_url="/redoc" if settings.APP_ENV != "production" else None,
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "env": settings.APP_ENV}
