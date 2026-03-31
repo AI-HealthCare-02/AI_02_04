@@ -95,3 +95,5 @@ class CharacterHistory(Base, TimestampMixin):
     leveled_up_at = Column(DateTime, default=func.now(), nullable=False)
 
     character = relationship("Character", back_populates="history")
+
+
