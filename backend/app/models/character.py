@@ -17,10 +17,11 @@ from app.core.database import Base, TimestampMixin
 
 
 class CharacterStatus(str, enum.Enum):
-    happy = "happy"
-    normal = "normal"
-    sad = "sad"
-    sick = "sick"
+    happy= "happy"
+    energetic = "energetic"
+    recovering = "recovering"
+    tired = "tired"
+    struggling ="struggling"
 
 
 class Character(Base):
@@ -36,7 +37,7 @@ class Character(Base):
     exp = Column(Integer, default=0, nullable=False)
 
     status = Column(
-        Enum(CharacterStatus), default=CharacterStatus.normal, nullable=False
+        Enum(CharacterStatus), default=CharacterStatus.energetic, nullable=False
     )
 
     energy = Column(Integer, default=50)  # 걸음수 기반

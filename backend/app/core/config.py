@@ -4,23 +4,32 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     APP_ENV: str = "development"
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # DB
+    DATABASE_URL: str= ""
+
+    # JWT
+    JWT_SECRET_KEY: str = ""
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    DATABASE_URL: str
+    # AWS
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "ap-northeast-2"
     S3_BUCKET_NAME: str = ""
 
+    # OpenAI
     OPENAI_API_KEY: str = ""
-    MLFLOW_TRACKING_URI: str = "http://localhost:5001"
+
+    # ML
+    MODEL_PATH: str = ""
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  
 
 
 @lru_cache()
