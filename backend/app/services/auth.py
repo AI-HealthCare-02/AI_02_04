@@ -106,14 +106,13 @@ def register_user(db:Session, data:RegisterRequest) -> User:
 
 
 
-
 def signin_user(db:Session, email:str, password:str)->User:
   user = db.query(User).filter(User.email == email).first()
 
   if not user:
     raise ValueError("이메일 또는 비밀번호가 올바르지 않습니다.")
   
-  if not verify_password(password, user.password):#type:ignore
+  if not verify_password(password, user.password): #type:ignore
     raise ValueError("이메일 또는 비밀번호가 올바르지 않습니다.")
 
   if not user.is_active:#type:ignore
