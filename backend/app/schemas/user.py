@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-class userResponse(BaseModel):
+class UserResponse(BaseModel):
   user_id : int
   email: str
   user_type:str
