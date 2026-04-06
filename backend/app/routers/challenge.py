@@ -96,3 +96,5 @@ def get_streak(
     result = challenge_service.get_streak_summary(db, current_user["user_id"])
 
     return {"success": True, "data": result}
+
+
