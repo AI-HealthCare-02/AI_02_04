@@ -179,7 +179,7 @@ def log_challenge(
         .first()
     )
 
-    if challenge.challenge_type == ChallengeType.accumulate:
+    if challenge.challenge_type == ChallengeType.accumulate: #type:ignore
         if existing_log:
             existing_log.value += value  # type:ignore
             today_total = existing_log.value
@@ -220,7 +220,7 @@ def log_challenge(
         today_total = value
         is_completed = value == 1
     points_earned = 0
-    if is_completed and existing_log.points_earned == 0:
+    if is_completed and existing_log.points_earned == 0: #type:ignore
         points_earned = challenge.points
         existing_log.points_earned = points_earned  # type: ignore
 
@@ -238,14 +238,14 @@ def log_challenge(
         )
         db.add(history)
 
-        _update_character_exp(db, user_id, points_earned)
+        _update_character_exp(db, user_id, points_earned)# type: ignore
 
     # streak 계산
     streak_count = _calculate_streak(db, user_id, challenge_id)
     existing_log.streak_count = streak_count  # type: ignore
 
     # streak 보너스
-    if is_completed and streak_count in [3, 7]:
+    if is_completed and streak_count in [3, 7]:  # type: ignore
         bonus = 50 if streak_count == 3 else 150
         _add_bonus_exp(db, user_id, bonus, f"{streak_count}일 연속 달성 보너스")
 
