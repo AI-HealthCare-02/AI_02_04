@@ -26,7 +26,7 @@ def create_access_token(user: User) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    payload = {"sub": str(user.id), "exp": expire}
+    payload = {"sub": str(user.id), "exp": expire, "user_type": user.user_type.value}
 
     if user.user_type.value == UserType.normal:
         payload["goal"] = user.goal.value if user.goal.value else None
