@@ -1,29 +1,28 @@
 """
-데이터 로드 — 이진 분류
-0 = 정상, 1 = 위험군
-데이터셋: diabetes_binary_5050split (50:50 균형)
+데이터 로드 및 전처리
 """
-
-import numpy as np
 import pandas as pd
-from config import DATA_PATH
+import numpy as np
+from config import DATA_PATH, SEED
 
 
-def load_data() -> pd.DataFrame:
-    df = pd.read_csv(DATA_PATH)
+def load_data(path=DATA_PATH):
+    """원본 데이터 로드 + 중복 제거 + 타겟 재정의"""
+    df = pd.read_csv(path)
     df = df.drop_duplicates().reset_index(drop=True)
 
-    # 타겟 컬럼 자동 감지
-    if "Diabetes_binary" in df.columns:
-        df["target"] = df["Diabetes_binary"].astype(int)
-    else:
-        df["target"] = df["Diabetes_012"].astype(int)
+    # 타겟 재정의: 0+1(정상+전당뇨) vs 2(당뇨)
+    df["target"] = (df["Diabetes_012"] == 2).astype(int)
 
-    print(f"  데이터 로드 완료: {df.shape}")
-    print(f"  0 (정상):   {(df['target']==0).mean():.1%}")
-    print(f"  1 (위험군): {(df['target']==1).mean():.1%}")
     return df
 
 
-def get_labels(df: pd.DataFrame) -> np.ndarray:
+def get_target(df):
+    """타겟 벡터 반환"""
     return df["target"].values
+
+
+def print_data_info(df):
+    """데이터 기본 정보 출력"""
+    y = get_target(df)
+    print(f"  Shape: {df.shape}, 당뇨 비율: {y.mean():.1%}")
