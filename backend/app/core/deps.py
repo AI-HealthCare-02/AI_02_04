@@ -32,7 +32,7 @@ def get_current_user(
 
     except JWTError:
         raise credentials_exception
-    print(11111111,payload)
+    
     return {"user_id": int(user_id), "payload": payload}
 
 
