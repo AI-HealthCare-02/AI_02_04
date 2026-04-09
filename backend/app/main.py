@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, user, health, challenge,character,dashboard, diet
+from app.routers import auth, user, health, challenge,character,dashboard, diet, predict, recommend
 
 
 app = FastAPI(
@@ -28,6 +28,8 @@ app.include_router(challenge.router, prefix="/challenges", tags=["challenges"])
 app.include_router(character.router, prefix="/character", tags=["character"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(diet.router, prefix="/diet", tags=["diet"])
+app.include_router(predict.router, prefix="/predict", tags=["predict"])
+app.include_router(recommend.router, prefix="/recommend", tags=["recommend"])
 
 
 @app.get("/health")

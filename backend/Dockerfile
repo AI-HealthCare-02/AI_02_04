@@ -19,6 +19,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     libpq-dev \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 appuser

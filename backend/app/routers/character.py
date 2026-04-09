@@ -15,7 +15,7 @@ def get_character(
   db: Session = Depends(get_db)
 ):
   user_id = current_user["user_id"]
-  character = character_service.update_chracter_state(db, current_user["user_id"])
+  character = character_service.update_chracter_state(db, user_id)
 
   return {
     "success" : True,
@@ -35,7 +35,8 @@ def get_character(
       "last_visited_at":  character.last_visited_at,
       "is_graduated" : character.is_graduated,
       "graduated_at" : character.graduated_at,
-      "created_at": character.created_at
+      "created_at": character.created_at,
+      "char_image_url": character.char_img_url
     }
   }
 
