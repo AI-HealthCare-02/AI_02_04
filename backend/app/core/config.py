@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 
+
 class Settings(BaseSettings):
     APP_ENV: str = "development"
 
@@ -24,7 +25,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
 
     # ML
-    MODEL_PATH: str = ""
+    ML_MODEL_PATH: str = "/ml/saved_models"
+
 
     class Config:
         env_file = ".env"

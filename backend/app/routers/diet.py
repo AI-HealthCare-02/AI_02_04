@@ -63,3 +63,29 @@ def update_diet_manual(
         "created_at": result.created_at,
       }
   }
+
+
+
+@router.post("/analyze")
+def analyze_diet(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Mock 응답우선 하겠으빈다
+    return {
+        "success": True,
+        "data": {
+            "diet_id":    1,
+            "food_name":  "비빔밥",
+            "calories":   100,
+            "carbs":      20,
+            "protein":    10,
+            "sugar":     2,
+            "fiber":      11,
+            "gi_index":   12,
+            "diet_score": 22,
+            "highlight":  "carbs",
+            "challenge_achieved": False,
+            "points_earned": 0,
+        }
+    }
