@@ -9,7 +9,6 @@ from app.core.config import settings
 
 sys.path.append("/ml/risk_model")
 
-os.environ["SAVE_DIR"] = "/ml/risk_model/saved_models"
 import config #type:ignore
 config.SAVE_DIR = "/ml/risk_model/saved_models"
 
