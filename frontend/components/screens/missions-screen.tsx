@@ -1,19 +1,25 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog, AlertModal } from "@/components/ui/confirm-dialog";
+import { ScrollHeader } from "@/components/ui/scroll-header";
+import { useScrollHeader } from "@/hooks/use-scroll-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   CheckCircle2,
-  Circle,
   Zap,
-  Target,
   Droplets,
   Footprints,
+  Dumbbell,
+  Pill,
+  Apple,
+  BedDouble,
+  ClipboardList,
+  Check,
+  ActivitySquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/ui/navigation-menu";
@@ -23,34 +29,38 @@ export function MissionsScreen() {
   const { setScreen, missions, completeMission, updateMissionProgress } =
     useAppStore();
 
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
-  const [inputValue, setInputValue] = useState("");
+  const isScrolled = useScrollHeader();
 
-  // ✨ 혈당 측정 시점을 저장할 상태 (기본값: 식전)
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+  const [autoConfirmMission, setAutoConfirmMission] = useState<Mission | null>(
+    null,
+  );
+  const [showEmptyInputAlert, setShowEmptyInputAlert] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   const [sugarTag, setSugarTag] = useState<"premeal" | "postmeal" | "sleep">(
     "premeal",
   );
 
+  /* ── 파생 값 ── */
   const completedCount = missions.filter((m) => m.completed).length;
   const progressPercent =
     missions.length > 0 ? (completedCount / missions.length) * 100 : 0;
 
+  /* ── 미션 분류 ── */
+  const walkingMission = missions.find((m) => m.id === "c1");
+  const waterMission = missions.find((m) => m.id === "c2");
+  const generalMissions = missions.filter(
+    (m) => m.id !== "c1" && m.id !== "c2",
+  );
+
+  /* ── 핸들러 (기존 로직 그대로) ── */
   const handleMissionClick = (mission: Mission) => {
     if (mission.completed) return;
-
     if (mission.id === "c1" || mission.id === "c2") return;
-
     if (mission.type === "auto") {
-      if (
-        confirm(
-          `'${mission.title}' 미션은 건강 데이터 및 식단 분석과 자동으로 연동됩니다.\n(테스트: 강제로 완료하시겠습니까?)`,
-        )
-      ) {
-        completeMission(mission.id);
-      }
+      setAutoConfirmMission(mission);
       return;
     }
-
     if (mission.inputType && mission.inputType !== "none") {
       setSelectedMission(mission);
       setInputValue("");
@@ -62,15 +72,9 @@ export function MissionsScreen() {
   const handleModalSubmit = () => {
     if (!selectedMission) return;
     if (!inputValue.trim()) {
-      alert("기록할 값을 입력해 주세요.");
+      setShowEmptyInputAlert(true);
       return;
     }
-
-    // 💡 나중에 백엔드 API를 연동할 때, 아래처럼 sugarTag를 함께 전송할 수 있습니다.
-    // if (selectedMission.title.includes('혈당')) {
-    //   api.post('/health/glucose', { value: inputValue, type: sugarTag });
-    // }
-
     completeMission(selectedMission.id, inputValue);
     setSelectedMission(null);
     setInputValue("");
@@ -78,223 +82,212 @@ export function MissionsScreen() {
 
   const handleWaterAdd = (mission: Mission) => {
     if (mission.completed) return;
-    const newCurrent = mission.current + 1;
-    if (newCurrent >= mission.target) {
-      completeMission(mission.id);
-    } else {
-      updateMissionProgress(mission.id, newCurrent);
-    }
+    const next = mission.current + 1;
+    if (next >= mission.target) completeMission(mission.id);
+    else updateMissionProgress(mission.id, next);
   };
 
   const handleStepSync = (mission: Mission) => {
     if (mission.completed) return;
-    const newCurrent = Math.min(mission.current + 2500, mission.target);
-    if (newCurrent >= mission.target) {
-      completeMission(mission.id);
-    } else {
-      updateMissionProgress(mission.id, newCurrent);
-    }
+    const next = Math.min(mission.current + 2500, mission.target);
+    if (next >= mission.target) completeMission(mission.id);
+    else updateMissionProgress(mission.id, next);
   };
 
+  /* ═══════════════════════════════════════════════════
+     렌더
+  ══════════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-24">
-      {/* <div className="p-4 pt-10 pb-6 bg-background/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/50">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Target className="w-6 h-6 text-primary" />
-          오늘의 미션
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          건강한 하루를 위해 미션을 달성해 보세요!
-        </p>
-      </div> */}
+    <div className="min-h-screen bg-[#F9FFEF] flex flex-col">
+      {/* ── 스크롤 시 나타나는 컴팩트 헤더 ── */}
+      <ScrollHeader
+        title="오늘의 미션"
+        onBack={() => setScreen("home")}
+        visible={isScrolled}
+      />
 
-      <div className="p-4 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setScreen("home")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-foreground">오늘의 미션</h1>
-          <p className="text-sm text-muted-foreground">
-            건강한 하루를 위해 미션을 달성해 보세요!
-          </p>
+      {/* ── 기본 헤더 (default) ── */}
+      <div className="bg-white border-b border-black/[0.06]">
+        <div className="flex items-center gap-1 px-4 pt-12 pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setScreen("home")}
+            className="shrink-0 text-[#3C3C3C]"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div className="ms-1">
+            <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">
+              오늘의 미션
+            </h1>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">
+              건강한 하루를 위해 미션을 달성해 보세요!
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        <Card className="border-primary/20 bg-primary/5 shadow-sm">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-bold text-foreground">달성률</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {completedCount} / {missions.length}개 완료
-                </p>
-              </div>
-              <div className="text-2xl font-black text-primary">
-                {Math.round(progressPercent)}%
-              </div>
+      {/* ════════════════════════════════════════
+          PAGE CONTENT
+      ════════════════════════════════════════ */}
+      <div className="flex-1 px-6 pt-5 pb-28 space-y-5">
+        {/* ── 달성률 요약 카드 ── */}
+        <div className="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              {/* Label — uppercase, 12px, #6A6A6A */}
+              <p className="text-[12px] font-semibold text-[#6A6A6A] uppercase tracking-[0.05em] mb-1">
+                달성률
+              </p>
+              {/* "N / M개 완료" — Body 14px #7A7A7A */}
+              <p className="text-[14px] font-medium text-[#7A7A7A]">
+                {completedCount} / {missions.length}개 완료
+              </p>
             </div>
-            <Progress value={progressPercent} className="h-2.5" />
-          </CardContent>
-        </Card>
+            {/* KPI 숫자 — Headline 36px bold (DESIGN-LANGUAGE.md 2:1 비율 규칙) */}
+            <p className="text-[36px] font-bold text-[#3C3C3C] leading-none tracking-[-0.02em]">
+              {Math.round(progressPercent)}
+              <span className="text-[18px] font-bold text-[#9B9B9B] ms-0.5">
+                %
+              </span>
+            </p>
+          </div>
 
-        <div className="space-y-4">
-          {missions.map((mission) => {
-            // 🔥 [특수 UI] 만보 걷기 & 물 마시기
-            if (mission.id === "c1" || mission.id === "c2") {
-              const isWater = mission.id === "c2";
-              return (
-                <Card
-                  key={mission.id}
-                  className={cn(
-                    "overflow-hidden transition-all border-border/50 shadow-sm",
-                    mission.completed ? "bg-muted/30 opacity-75" : "bg-card",
-                  )}
+          {/* 전체 게이지 — h-2, rounded-full, ring color fill */}
+          <div className="mt-4 h-2 bg-[#E8E6E1] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-ring rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* ── 만보 걷기 (c1) — 특수 카드 ── */}
+        {/* 만보 걷기 — Sub Green #CBF891 */}
+        {walkingMission && (
+          <SpecialMissionCard
+            mission={walkingMission}
+            accentColor="#3E8C28"
+            barColor="bg-[#87D57B]"
+            iconBg="bg-[#CBF891]"
+            icon={<Footprints className="size-5 text-[#3E8C28]" />}
+            unitLabel="걸음"
+            actionButton={
+              !walkingMission.completed ? (
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-[#3E8C28] border-[#3E8C28]/25 hover:bg-[#CBF891] font-bold"
+                  onClick={() => handleStepSync(walkingMission)}
                 >
-                  <CardContent className="p-4 space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="shrink-0">
-                          {mission.completed ? (
-                            <CheckCircle2 className="w-7 h-7 text-success" />
-                          ) : (
-                            <span className="text-2xl">{mission.icon}</span>
-                          )}
-                        </div>
-                        <div>
-                          <h3
-                            className={cn(
-                              "font-bold text-foreground",
-                              mission.completed &&
-                                "line-through text-muted-foreground",
-                            )}
-                          >
-                            {mission.title}
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            {mission.description}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-amber-500 flex items-center gap-0.5 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                        <Zap className="w-3 h-3" /> {mission.points}P
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5 bg-muted/30 p-3 rounded-xl">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-muted-foreground">진행률</span>
-                        <span
-                          className={isWater ? "text-blue-500" : "text-primary"}
-                        >
-                          {mission.current.toLocaleString()} /{" "}
-                          {mission.target.toLocaleString()}{" "}
-                          {isWater ? "잔" : "걸음"}
-                        </span>
-                      </div>
-                      <Progress
-                        value={(mission.current / mission.target) * 100}
-                        className={cn(
-                          "h-2.5",
-                          isWater ? "[&>div]:bg-blue-500" : "",
-                        )}
-                      />
-                    </div>
-
-                    {!mission.completed && (
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full h-12 shadow-sm",
-                          isWater
-                            ? "text-blue-600 border-blue-200 hover:bg-blue-50"
-                            : "text-primary border-primary/30 hover:bg-primary/5",
-                        )}
-                        onClick={() =>
-                          isWater
-                            ? handleWaterAdd(mission)
-                            : handleStepSync(mission)
-                        }
-                      >
-                        {isWater ? (
-                          <>
-                            <Droplets className="w-4 h-4 mr-2" /> 1잔 마시기
-                          </>
-                        ) : (
-                          <>
-                            <Footprints className="w-4 h-4 mr-2" /> 헬스 데이터
-                            연동 (테스트 +2500)
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
+                  <Footprints className="size-4 me-2" />
+                  헬스 데이터 연동 (테스트 +2500)
+                </Button>
+              ) : null
             }
+          />
+        )}
 
-            // 🎯 [일반 UI] 그 외의 체크형 / 입력형 미션 렌더링
-            return (
-              <Card
+        {/* ── 물 마시기 (c2) — Accent Blue #AEE1F9 ── */}
+        {waterMission && (
+          <SpecialMissionCard
+            mission={waterMission}
+            accentColor="#2878B0"
+            barColor="bg-[#AEE1F9]"
+            iconBg="bg-[#AEE1F9]"
+            icon={<Droplets className="size-5 text-[#2878B0]" />}
+            unitLabel="잔"
+            actionButton={
+              !waterMission.completed ? (
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-[#2878B0] border-[#2878B0]/25 hover:bg-[#AEE1F9] font-bold"
+                  onClick={() => handleWaterAdd(waterMission)}
+                >
+                  <Droplets className="size-4 me-2" />
+                  1잔 마시기
+                </Button>
+              ) : null
+            }
+          />
+        )}
+
+        {/* ── 일반 미션 목록 — 단일 화이트 카드 + 행 구분선 ── */}
+        {generalMissions.length > 0 && (
+          <div className="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+            {generalMissions.map((mission, idx) => (
+              <div
                 key={mission.id}
                 className={cn(
-                  "overflow-hidden transition-all cursor-pointer border-border/50 shadow-sm hover:border-primary/50",
-                  mission.completed ? "bg-muted/30 opacity-75" : "bg-card",
+                  "flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors",
+                  "hover:bg-[#FAFAFA] active:bg-[#F5F5F5]",
+                  idx > 0 && "border-t border-black/[0.04]",
                 )}
                 onClick={() => handleMissionClick(mission)}
               >
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="shrink-0">
-                    {mission.completed ? (
-                      <CheckCircle2 className="w-7 h-7 text-success" />
-                    ) : (
-                      <Circle className="w-7 h-7 text-muted-foreground/30" />
-                    )}
-                  </div>
+                {/* 미션 아이콘 서클 */}
+                <MissionIconCircle
+                  category={mission.category}
+                  completed={mission.completed}
+                />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{mission.icon}</span>
-                      <h3
-                        className={cn(
-                          "font-bold text-foreground truncate",
-                          mission.completed &&
-                            "line-through text-muted-foreground",
-                        )}
-                      >
-                        {mission.title}
-                      </h3>
-                      {!mission.completed && mission.target > 1 && (
-                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
-                          {mission.current} / {mission.target}
-                        </span>
+                {/* 텍스트 영역 — flex-1로 가능한 모든 너비 사용, truncate 없음 */}
+                <div className="flex-1 min-w-0">
+                  {/* 첫째 줄: 제목 + 포인트 뱃지 */}
+                  <div className="flex items-start justify-between gap-2 mb-0.5">
+                    {/* 제목 — truncate 제거, 줄바꿈 허용 */}
+                    <p
+                      className={cn(
+                        "text-[14px] font-bold text-[#3C3C3C] leading-snug",
+                        mission.completed && "line-through text-[#9B9B9B]",
                       )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {mission.description}
+                    >
+                      {mission.title}
                     </p>
+                    {/* 포인트 뱃지 — 오른쪽 상단 고정 */}
+                    <span className="shrink-0 flex items-center gap-0.5 text-[11px] font-bold text-[#D97706] bg-[#FEF9EE] px-2 py-1 rounded-full border border-[#D97706]/15">
+                      <Zap className="size-3" />
+                      {mission.points}P
+                    </span>
                   </div>
 
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-xs font-bold text-amber-500 flex items-center gap-0.5 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                      <Zap className="w-3 h-3" /> {mission.points}P
-                    </span>
-                    {!mission.completed &&
-                      mission.inputType &&
-                      mission.inputType !== "none" && (
-                        <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md mt-1">
-                          기록 필요
-                        </span>
-                      )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  {/* 둘째 줄: 설명 — truncate 제거, 전체 노출 */}
+                  <p
+                    className={cn(
+                      "text-[13px] leading-normal",
+                      mission.completed ? "text-[#B0B0B0]" : "text-[#7A7A7A]",
+                    )}
+                  >
+                    {mission.description}
+                  </p>
+
+                  {/* 셋째 줄: 진행률 뱃지 + 기록 필요 (있을 때만) */}
+                  {!mission.completed &&
+                    (mission.target > 1 ||
+                      (mission.inputType && mission.inputType !== "none")) && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {mission.target > 1 && (
+                          <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            {mission.current} / {mission.target}
+                          </span>
+                        )}
+                        {mission.inputType && mission.inputType !== "none" && (
+                          <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            기록 필요
+                          </span>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 혈당 값 입력 모달 */}
+      {/* ════════════════════════════════════════
+          미션 기록 입력 모달
+      ════════════════════════════════════════ */}
       <Dialog
         open={!!selectedMission}
         onOpenChange={(open) => {
@@ -304,36 +297,33 @@ export function MissionsScreen() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-sm rounded-3xl p-6">
-          <DialogTitle className="text-xl font-bold text-center">
+        <DialogContent showCloseButton={false}>
+          <div className="size-14 rounded-full bg-[#CBF891] flex items-center justify-center mx-auto mb-1">
+            <ActivitySquare className="size-7 text-[#3E8C28]" strokeWidth={2} />
+          </div>
+          <DialogTitle className="text-center">
             {selectedMission?.title}
           </DialogTitle>
-
-          <div className="space-y-6 pt-2">
-            <div className="text-center space-y-1">
-              <span className="text-4xl">{selectedMission?.icon}</span>
-              <p className="text-sm text-muted-foreground pt-2">
-                {selectedMission?.description}
-              </p>
-            </div>
-
-            {/* ✨ '식전/식후 혈당 기록' 미션일 경우에만 버튼 2개가 나타남! */}
+          <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
+            {selectedMission?.description}
+          </p>
+          <div className="space-y-4 mt-4">
             {selectedMission?.title.includes("식전/식후") && (
-              <div className="space-y-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
-                <Label className="text-xs font-bold text-primary">
+              <div className="space-y-2 bg-[#F9FFEF] p-4 rounded-2xl border border-[#CBF891]/60">
+                <Label className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">
                   측정 시점 선택
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={sugarTag === "premeal" ? "default" : "outline"}
-                    className="h-10 text-xs"
+                    className="h-10 text-[13px] font-bold rounded-xl"
                     onClick={() => setSugarTag("premeal")}
                   >
                     식사 전
                   </Button>
                   <Button
                     variant={sugarTag === "postmeal" ? "default" : "outline"}
-                    className="h-10 text-xs"
+                    className="h-10 text-[13px] font-bold rounded-xl"
                     onClick={() => setSugarTag("postmeal")}
                   >
                     식사 후
@@ -341,15 +331,14 @@ export function MissionsScreen() {
                 </div>
               </div>
             )}
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label
                 htmlFor="mission-input"
-                className="text-xs text-muted-foreground"
+                className="text-[12px] font-semibold text-[#6A6A6A]"
               >
                 {selectedMission?.inputType === "number"
-                  ? "수치를 입력해 주세요 (숫자)"
-                  : "상태를 기록해 주세요 (텍스트)"}
+                  ? "수치를 입력해 주세요"
+                  : "상태를 기록해 주세요"}
               </Label>
               <div className="relative">
                 <Input
@@ -364,35 +353,256 @@ export function MissionsScreen() {
                   }
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  className="h-14 text-lg font-bold pr-12"
+                  className="h-14 text-[18px] font-bold pr-16 rounded-xl"
                   autoFocus
                 />
-                {/* 혈당 단위 표시 */}
                 {selectedMission?.title.includes("혈당") && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-[#9B9B9B] font-medium">
                     mg/dL
                   </span>
                 )}
-                {/* 체중 단위 표시 (추가 디테일) */}
                 {selectedMission?.title.includes("체중") && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-[#9B9B9B] font-medium">
                     kg
                   </span>
                 )}
               </div>
             </div>
-
-            <Button
-              className="w-full h-14 text-lg rounded-xl shadow-md"
-              onClick={handleModalSubmit}
-            >
-              기록하고 완료하기
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+                onClick={() => {
+                  setSelectedMission(null);
+                  setInputValue("");
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+                onClick={handleModalSubmit}
+              >
+                기록하고 완료하기
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      <ConfirmDialog
+        open={!!autoConfirmMission}
+        onOpenChange={(open) => {
+          if (!open) setAutoConfirmMission(null);
+        }}
+        icon={ActivitySquare}
+        iconBg="#CBF891"
+        iconColor="#3E8C28"
+        title="건강 데이터 연동 미션"
+        description={`'${autoConfirmMission?.title}' 미션은 건강 데이터 및 식단 분석과 자동으로 연동됩니다.\n테스트로 강제 완료하시겠습니까?`}
+        confirmLabel="완료 처리"
+        cancelLabel="취소"
+        onConfirm={() => {
+          if (autoConfirmMission) completeMission(autoConfirmMission.id);
+          setAutoConfirmMission(null);
+        }}
+      />
+
+      <AlertModal
+        open={showEmptyInputAlert}
+        onOpenChange={setShowEmptyInputAlert}
+        icon={ActivitySquare}
+        iconBg="#FFF383"
+        iconColor="#8C7010"
+        title="입력값이 없어요"
+        description="기록할 값을 입력해 주세요."
+        confirmLabel="확인"
+      />
+
       <BottomNav />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MissionIconCircle — 카테고리별 SVG 아이콘 서클
+   • 미완료: 연한 배경 원 + 컬러 아이콘
+   • 완료:   진한 배경 원 + 흰색 아이콘 + 우하단 초록 체크 배지
+───────────────────────────────────────────────────────────── */
+type MissionCategory =
+  | "walking"
+  | "exercise"
+  | "water"
+  | "medicine"
+  | "diet"
+  | "sleep"
+  | "health_record";
+
+const categoryConfig: Record<
+  MissionCategory,
+  {
+    Icon: React.ElementType;
+    lightBg: string;
+    iconColor: string;
+  }
+> = {
+  /* 그린 계열 — Sub 컬러 팔레트 사용 */
+  walking: { Icon: Footprints, lightBg: "#CBF891", iconColor: "#3E8C28" },
+  /* 블루 계열 — Accent Blue #AEE1F9 톤 */
+  water: { Icon: Droplets, lightBg: "#AEE1F9", iconColor: "#2878B0" },
+  sleep: { Icon: BedDouble, lightBg: "#daf3fe", iconColor: "#579BB1" },
+  /* 옐로우 계열 — Accent Yellow #FFF383 톤 */
+  diet: { Icon: Apple, lightBg: "#FFF6BF", iconColor: "#f7b488" },
+  /* 민트 계열 — Accent Mint #A1E8CE 톤 */
+  health_record: {
+    Icon: ClipboardList,
+    lightBg: "#E0FBE2",
+    iconColor: "#A6D0DD",
+  },
+  /* 파스텔 핑크 — 동일 명도/채도 톤 매칭 */
+  medicine: { Icon: Pill, lightBg: "#FFE1E1", iconColor: "#FFACC7" },
+  /* 파스텔 라벤더 — 동일 명도/채도 톤 매칭 */
+  exercise: { Icon: Dumbbell, lightBg: "#F5EFFF", iconColor: "#A294F9" },
+};
+
+function MissionIconCircle({
+  category,
+  completed,
+}: {
+  category: MissionCategory | string;
+  completed: boolean;
+}) {
+  const cfg =
+    categoryConfig[category as MissionCategory] ?? categoryConfig.health_record;
+  const { Icon, lightBg, iconColor } = cfg;
+
+  return (
+    <div className="relative shrink-0 size-12">
+      {/* 미완료 / 완료 공통: 연한 배경 원 + 컬러 아이콘
+          완료 시 두꺼운 컬러 border 추가 */}
+      <div
+        className="size-12 rounded-full flex items-center justify-center transition-all duration-200"
+        style={{
+          backgroundColor: lightBg,
+          border: completed
+            ? `2px solid ${iconColor}`
+            : "2.5px solid transparent",
+        }}
+      >
+        <Icon
+          className="size-[22px]"
+          style={{ color: iconColor }}
+          strokeWidth={completed ? 2 : 1.8}
+        />
+      </div>
+
+      {/* 체크 배지 — 완료 시 우하단 */}
+      {completed && (
+        <div
+          className="absolute -bottom-0.5 -right-0.5 size-[18px] rounded-full border-2 border-white flex items-center justify-center"
+          style={{ backgroundColor: iconColor }}
+        >
+          <Check className="size-2.5 text-white" strokeWidth={3.5} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SpecialMissionCard — 만보/물 전용 카드 (c1, c2)
+───────────────────────────────────────────────────────────── */
+interface SpecialMissionCardProps {
+  mission: Mission;
+  accentColor: string;
+  barColor: string;
+  iconBg: string;
+  icon: React.ReactNode;
+  unitLabel: string;
+  actionButton: React.ReactNode;
+}
+
+function SpecialMissionCard({
+  mission,
+  barColor,
+  iconBg,
+  icon,
+  unitLabel,
+  actionButton,
+}: SpecialMissionCardProps) {
+  const pct = Math.min((mission.current / mission.target) * 100, 100);
+
+  return (
+    <div
+      className={cn(
+        "bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden",
+        mission.completed && "opacity-70",
+      )}
+    >
+      {/* 상단: 아이콘 + 제목 + 포인트 */}
+      <div className="flex items-start gap-4 p-5 pb-4">
+        {/* 아이콘 or 완료 체크 */}
+        <div
+          className={cn(
+            "size-11 rounded-xl flex items-center justify-center shrink-0",
+            iconBg,
+          )}
+        >
+          {mission.completed ? (
+            <CheckCircle2 className="size-6 text-[#6B9B7A]" />
+          ) : (
+            icon
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p
+            className={cn(
+              "text-[15px] font-bold text-[#3C3C3C] mb-0.5",
+              mission.completed && "line-through text-[#9B9B9B]",
+            )}
+          >
+            {mission.title}
+          </p>
+          <p className="text-[13px] text-[#7A7A7A]">{mission.description}</p>
+        </div>
+
+        {/* 포인트 뱃지 */}
+        <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#D97706] bg-[#FEF9EE] px-2.5 py-1 rounded-full border border-[#D97706]/15 shrink-0">
+          <Zap className="size-3" />
+          {mission.points}P
+        </span>
+      </div>
+
+      {/* 진행 영역 */}
+      <div className="mx-5 mb-4 bg-[#FAFAFA] rounded-xl px-4 py-3 border border-black/[0.04]">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[12px] font-semibold text-[#6A6A6A] uppercase tracking-[0.05em]">
+            진행률
+          </p>
+          {/* 수치 표시 — Body 13px */}
+          <p className="text-[13px] font-bold text-[#3C3C3C]">
+            {mission.current.toLocaleString()}
+            <span className="text-[#9B9B9B] font-medium">
+              {" "}
+              / {mission.target.toLocaleString()} {unitLabel}
+            </span>
+          </p>
+        </div>
+        {/* 게이지 — h-2, rounded-full, category color */}
+        <div className="h-2 bg-[#E8E6E1] rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              barColor,
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* 액션 버튼 영역 */}
+      {actionButton && <div className="px-5 pb-5">{actionButton}</div>}
     </div>
   );
 }

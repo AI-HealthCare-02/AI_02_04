@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BottomNav } from "@/components/ui/navigation-menu";
-
 import {
   Coins,
   Droplets,
@@ -15,33 +11,164 @@ import {
   Sparkles,
   BookOpen,
   TrendingUp,
-  User,
-  Battery,
-  Smile,
-  Shield,
-  Info,
   CheckCircle2,
-  Target,
+  Flame,
+  Zap,
+  Smile,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
+import { Button } from "@/components/ui/button";
 
-const getUiUserType = (type?: string) => {
-  if (!type) return "일반";
-  if (type.startsWith("general")) return "일반";
-  if (type === "at_risk") return "위험군";
-  if (type.startsWith("diabetic")) return "당뇨";
-  return "일반";
-};
-
+/* ─────────────────────────────────────────────────────────────
+   타입 & 상수
+───────────────────────────────────────────────────────────── */
 interface Recommendation {
   id: string;
   title: string;
   reason: string;
   source: string;
-  confidence: number;
 }
 
+const AI_RECOMMENDATIONS: Recommendation[] = [
+  {
+    id: "rec-1",
+    title: "점심 시간 15분 걷기로 전환해보세요.",
+    reason: "화/수 저녁 미션 실패가 반복되어 시간대를 변경했습니다.",
+    source: "대한당뇨병학회 가이드 p.52",
+  },
+  {
+    id: "rec-2",
+    title: "저녁 국물 요리를 줄이고 샐러드로 대체해보세요.",
+    reason: "최근 나트륨 섭취가 권장량을 초과합니다.",
+    source: "고혈압학회 진료지침 p.42",
+  },
+];
+
+const MOOD_EMOJI: Record<string, string> = {
+  happy: "😊",
+  normal: "😐",
+  sad: "😢",
+  sick: "🤒",
+};
+
+const MOOD_STAT: Record<string, number> = {
+  happy: 95,
+  normal: 72,
+  sad: 38,
+  sick: 18,
+};
+
+/* ─────────────────────────────────────────────────────────────
+   StatChip — 캐릭터 스탯 칩
+───────────────────────────────────────────────────────────── */
+function StatChip({
+  label,
+  value,
+  icon: Icon,
+  iconColor,
+  iconBg,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
+}) {
+  return (
+    <div className="flex-1 bg-white/70 rounded-2xl px-3 py-3 border border-white flex flex-col items-center gap-1.5 shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
+      {/* 아이콘 원형 배경 */}
+      <div
+        className="size-8 rounded-full flex items-center justify-center"
+        style={{ backgroundColor: iconBg }}
+      >
+        <Icon
+          className="size-4"
+          style={{ color: iconColor }}
+          strokeWidth={2.2}
+        />
+      </div>
+      <p className="text-[16px] font-black text-[#1A2E1C] leading-none">
+        {value}
+      </p>
+      <p
+        className="text-[9px] font-bold uppercase tracking-[0.07em]"
+        style={{ color: iconColor }}
+      >
+        {label}
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MissionRow 서브 컴포넌트
+───────────────────────────────────────────────────────────── */
+interface MissionRowProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  valueLabel: string;
+  progress: number;
+  barColor: string;
+  completed: boolean;
+  action?: React.ReactNode;
+}
+
+function MissionRow({
+  icon,
+  iconBg,
+  title,
+  valueLabel,
+  progress,
+  barColor,
+  completed,
+  action,
+}: MissionRowProps) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-4">
+      <div
+        className={cn(
+          "size-10 rounded-xl flex items-center justify-center shrink-0",
+          iconBg,
+        )}
+      >
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[14px] font-bold leading-none text-[#3C3C3C]">
+            {title}
+          </p>
+          <span className="text-[12px] font-medium text-[#9B9B9B]">
+            {valueLabel}
+          </span>
+        </div>
+        <div className="h-2 bg-[#E8E6E1] rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              barColor,
+            )}
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      </div>
+      <div className="shrink-0 w-[52px] flex justify-end">
+        {completed ? (
+          <CheckCircle2 className="size-5 text-[#87D57B]" />
+        ) : action ? (
+          action
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   HomeScreen 메인 컴포넌트
+───────────────────────────────────────────────────────────── */
 export function HomeScreen() {
   const {
     userProfile,
@@ -56,397 +183,415 @@ export function HomeScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  const energy = 80;
-  const stability = 65;
-  const moodValue =
-    character?.mood === "happy"
-      ? 100
-      : character?.mood === "sad"
-        ? 30
-        : character?.mood === "sick"
-          ? 10
-          : 70;
-
+  /* ── 걷기 미션 자동 증가 ── */
   useEffect(() => {
     const interval = setInterval(() => {
       const walkingMission = missions.find((m) => m.category === "walking");
       if (walkingMission && !walkingMission.completed) {
-        const newSteps =
-          walkingMission.current + Math.floor(Math.random() * 50);
-        if (newSteps >= walkingMission.target) {
-          completeMission(walkingMission.id);
-        } else {
-          updateMissionProgress(walkingMission.id, newSteps);
-        }
+        const next = walkingMission.current + Math.floor(Math.random() * 50);
+        if (next >= walkingMission.target) completeMission(walkingMission.id);
+        else updateMissionProgress(walkingMission.id, next);
       }
     }, 5000);
     return () => clearInterval(interval);
   }, [missions, updateMissionProgress, completeMission]);
 
+  /* ── 시계 ── */
   useEffect(() => {
     setCurrentTime(new Date());
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const interval = setInterval(() => setCurrentTime(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
 
+  /* ── 파생 값 ── */
   const completedMissions = missions.filter((m) => m.completed).length;
   const totalMissions = missions.length > 0 ? missions.length : 1;
   const missionProgress = (completedMissions / totalMissions) * 100;
 
-  // ✨ 미션 찾기 로직 강화: 이름이 달라도 카테고리로 무조건 찾아오게 수정
   const walkingMission = missions.find((m) => m.category === "walking");
   const waterMission = missions.find((m) => m.category === "water");
   const dietMission = missions.find((m) => m.category === "diet");
 
+  const expPercent = character
+    ? Math.min(
+        Math.round(
+          (character.experience / character.experienceToNextLevel) * 100,
+        ),
+        100,
+      )
+    : 0;
+
+  /* ── 캐릭터 스탯 파생 ── */
+  const energyVal = walkingMission
+    ? Math.max(
+        30,
+        Math.round((walkingMission.current / walkingMission.target) * 100),
+      )
+    : 50;
+  const moodVal = MOOD_STAT[character?.mood ?? "normal"];
+  const stabilityVal = Math.max(30, Math.round(missionProgress));
+
+  /* ── 물 한 잔 추가 ── */
   const handleWaterAdd = () => {
     if (!waterMission || waterMission.completed) return;
-    const newCurrent = waterMission.current + 1;
-    if (newCurrent >= waterMission.target) {
-      completeMission(waterMission.id);
-    } else {
-      updateMissionProgress(waterMission.id, newCurrent);
-    }
+    const next = waterMission.current + 1;
+    if (next >= waterMission.target) completeMission(waterMission.id);
+    else updateMissionProgress(waterMission.id, next);
   };
 
-  const hasEnoughData = true;
-  const aiRecommendations: Recommendation[] = [
-    {
-      id: "rec-1",
-      title: "점심 시간 15분 걷기로 전환해보세요.",
-      reason: "화/수 저녁 미션 실패가 반복되어 시간대를 변경했습니다.",
-      source: "대한당뇨병학회 가이드 p.52",
-      confidence: 85,
-    },
-    {
-      id: "rec-2",
-      title: "저녁 국물 요리를 줄이고 샐러드로 대체해보세요.",
-      reason: "최근 나트륨 섭취가 권장량을 초과합니다.",
-      source: "고혈압학회 진료지침 p.42",
-      confidence: 88,
-    },
-  ];
-
+  /* ═══════════════════════════════════════════════════════════
+     렌더
+  ══════════════════════════════════════════════════════════ */
   return (
-    // ✨ 부모 컨테이너에 flex flex-col 추가 (하단 영역 확장을 위해)
-    <div className="min-h-screen bg-[#F0F4F8] relative flex flex-col">
-      {/* -------------------------------------------
-          1. 캐릭터 풀사이즈 배경 영역
-      -------------------------------------------- */}
-      <div className="relative w-full h-[45vh] min-h-[450px] shrink-0 bg-gradient-to-b from-blue-100 via-sky-50 to-[#F0F4F8] flex flex-col items-center justify-start pt-16 pb-8 overflow-hidden">
-        {/* 좌측 스탯 영역 */}
-        <div className="absolute left-4 top-4 z-20 bg-white/50 backdrop-blur-md p-3 rounded-2xl shadow-sm border border-white/60 flex flex-col gap-3">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-foreground/80">
-              <Battery className="w-3.5 h-3.5 text-green-600" /> 에너지
+    <div className="min-h-screen flex flex-col bg-[#F9FFEF]">
+      {/* ════════════════════════════════════════
+          HERO — 캐릭터 영역
+      ════════════════════════════════════════ */}
+      <div className="relative flex flex-col items-center px-5 pt-14 pb-7">
+        {/* 최상단: 스트릭 + 포인트 */}
+        <div className="w-full flex items-center justify-between mb-5">
+          <div>
+            <p className="text-[10px] font-bold text-[#2A5C34]/60 uppercase tracking-[0.10em] mb-0.5">
+              Streak days
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Flame className="size-5 text-[#F97316]" />
+              <span className="text-[30px] font-black text-[#1A2E1C] leading-none">
+                {userProfile?.streak ?? 0}
+              </span>
             </div>
-            <Progress
-              value={energy}
-              className="h-1.5 w-20 [&>div]:bg-green-500 bg-white/50"
-            />
           </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-foreground/80">
-              <Smile className="w-3.5 h-3.5 text-yellow-600" /> 기분
-            </div>
-            <Progress
-              value={moodValue}
-              className="h-1.5 w-20 [&>div]:bg-yellow-500 bg-white/50"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-foreground/80">
-              <Shield className="w-3.5 h-3.5 text-blue-600" /> 안정감
-            </div>
-            <Progress
-              value={stability}
-              className="h-1.5 w-20 [&>div]:bg-blue-500 bg-white/50"
-            />
-          </div>
+
+          {/* 포인트 배지 */}
+          {/* <div className="flex items-center gap-1.5 bg-white/50 backdrop-blur-sm rounded-full px-3.5 py-2 border border-white/70 shadow-[0_1px_8px_rgba(0,0,0,0.08)]">
+            <Coins className="size-3.5 text-[#D97706]" />
+            <span className="text-[13px] font-bold text-[#1A2E1C]">
+              {(userProfile?.points ?? 0).toLocaleString()}
+              <span className="text-[11px] font-semibold text-[#3A6B44] ms-0.5">P</span>
+            </span>
+          </div> */}
         </div>
 
-        {/* 우측 상단 마이페이지 및 포인트 영역 */}
-        <div className="absolute right-4 top-4 flex flex-col items-end gap-2 z-20">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setScreen("mypage")}
-            className="bg-white/40 backdrop-blur-md shadow-sm rounded-full hover:bg-white/60"
+        {/* 캐릭터 GIF — 크게 중앙 */}
+        <div
+          className="flex items-center justify-center"
+          style={{ width: 210, height: 210 }}
+        >
+          <img
+            src="/created-gif.gif"
+            alt={character?.name ?? "캐릭터"}
+            className="w-full h-full object-contain drop-shadow-xl"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
+
+        {/* 캐릭터 이름 + 레벨 + 기분 */}
+        <div className="flex items-center gap-2.5 mt-3 mb-4">
+          <h1 className="text-[22px] font-black text-[#1A2E1C] leading-none tracking-[-0.5px]">
+            {character?.name ?? "알"}
+          </h1>
+          <span className="bg-[#3AAE5A] text-white text-[11px] font-bold px-2.5 py-[5px] rounded-full leading-none">
+            Lv.{character?.level ?? 1}
+          </span>
+        </div>
+
+        {/* XP 바 — 두꺼운 스트라이프 스타일 */}
+        <div className="w-full mb-5">
+          {/* 라벨 행 */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-[#3E8C28] uppercase tracking-[0.06em]">
+              EXP
+            </span>
+            <span className="text-[11px] font-semibold text-[#3E8C28]">
+              {character?.experience ?? 0}
+              <span className="text-[#87D57B] font-medium">
+                {" "}
+                / {character?.experienceToNextLevel ?? 100}
+              </span>
+            </span>
+          </div>
+          {/* 바 */}
+          <div
+            className="relative h-8 rounded-full overflow-hidden"
+            style={{ background: "#E4EFD2" }}
           >
-            <User className="w-5 h-5 text-foreground" />
-          </Button>
-          <div className="px-3 py-1.5 flex items-center gap-1.5 bg-white/50 backdrop-blur-md rounded-xl shadow-sm border border-white/60">
-            <Coins className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-bold text-amber-600">
-              {userProfile?.points || 0}P
+            {/* Fill */}
+            <div
+              className="absolute left-0 top-0 h-full rounded-full overflow-hidden"
+              style={{
+                width: `${expPercent}%`,
+                background: "linear-gradient(90deg, #5FC952 0%, #87D57B 100%)",
+              }}
+            >
+              {/* 스트라이프 오버레이 */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(255,255,255,0.22) 9px, rgba(255,255,255,0.22) 18px)",
+                }}
+              />
+            </div>
+            {/* 수치 텍스트 — 항상 선명하게 */}
+            <span
+              className="absolute inset-0 flex items-center justify-center text-[12px] font-black"
+              style={{
+                color: expPercent > 45 ? "#fff" : "#2A5C34",
+                textShadow:
+                  expPercent > 45 ? "0 1px 4px rgba(0,0,0,0.20)" : "none",
+              }}
+            >
+              {expPercent}%
             </span>
           </div>
+          <p className="text-[11px] font-medium text-[#3E8C28] text-center mt-1.5">
+            다음 레벨까지{" "}
+            <span className="font-bold text-[#2A5C34]">
+              {(character?.experienceToNextLevel ?? 100) -
+                (character?.experience ?? 0)}
+            </span>{" "}
+            XP 남았어요
+          </p>
         </div>
 
-        {/* 캐릭터 위치 (GIF) */}
-        <div className="relative z-10 flex flex-col items-center mt-10">
-          <div className="w-48 h-48 flex items-center justify-center mb-2 animate-bounce">
-            <img
-              src="/created-gif.gif"
-              alt="메인 캐릭터"
-              className="w-full h-full object-contain drop-shadow-xl"
-              style={{ imageRendering: "pixelated" }}
-            />
-          </div>
-          <div className="text-center bg-white/70 backdrop-blur-md px-5 py-2 rounded-full shadow-sm border border-white/50 mb-5">
-            <span className="text-primary text-xs font-black mr-1.5">
-              Lv.{character?.level || 1}
-            </span>
-            <span className="font-bold text-foreground">
-              {character?.name || "알"}
-            </span>
-          </div>
+        {/* 캐릭터 스탯 3종 */}
+        <div className="flex gap-2.5 w-full">
+          {/* 에너지 — Accent Yellow 톤 */}
+          <StatChip
+            label="에너지"
+            value={energyVal}
+            icon={Zap}
+            iconColor="#EDA35A"
+            iconBg="#FFF383"
+          />
+          {/* 기분 — Pastel Pink 톤 */}
+          <StatChip
+            label="기분"
+            value={moodVal}
+            icon={Smile}
+            iconColor="#647FBC"
+            iconBg="#CFECF3"
+          />
+          {/* 안정감 — Primary Green 톤 */}
+          <StatChip
+            label="안정감"
+            value={stabilityVal}
+            icon={ShieldCheck}
+            iconColor="#3E8C28"
+            iconBg="#E9FBA4"
+          />
         </div>
       </div>
 
-      {/* -------------------------------------------
-          2. 하단 둥근 모서리 컨테이너
-      -------------------------------------------- */}
-      {/* ✨ flex-1 속성을 주어 화면 끝까지 채우고, pb-32로 네비게이션 바와 겹치지 않게 처리 */}
-      <div className="relative z-30 w-full bg-[#FFFBF5] rounded-t-[40px] px-5 pt-8 pb-32 -mt-16 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-8 flex-1">
-        {/* ✨ 오늘의 추천 (Today's Recommendation) */}
-        {hasEnoughData && aiRecommendations.length > 0 && (
+      {/* ════════════════════════════════════════
+          SCROLL CONTENT — 흰색 카드 영역
+          (배경 컬러가 양옆에 보이도록 mx-4 패딩)
+      ════════════════════════════════════════ */}
+      <div className="flex-1 px-4 pb-28 space-y-4">
+        {/* ── 오늘의 추천 ── */}
+        {AI_RECOMMENDATIONS.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-4 px-1">
-              <h3 className="text-[16px] font-black text-foreground flex items-center gap-1.5">
-                <Sparkles className="w-[18px] h-[18px] text-emerald-500" />{" "}
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <h2 className="text-[17px] font-bold text-[#1A2E1C]">
                 오늘의 추천
-              </h3>
-              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-2 py-1 rounded-md">
+              </h2>
+              <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
                 AI 분석
               </span>
             </div>
 
             <div className="space-y-3">
-              {aiRecommendations.map((rec, idx) => {
+              {AI_RECOMMENDATIONS.map((rec, idx) => {
                 const isFirst = idx === 0;
-                const cardClass = isFirst
-                  ? "bg-[#FFD6D6]/60 border-transparent text-[#5C2B2B]"
-                  : "bg-[#D6EFD0]/70 border-transparent text-[#264D29]";
-
                 return (
-                  <Card
+                  <div
                     key={rec.id}
-                    className={cn(
-                      "rounded-[24px] shadow-none border-none",
-                      cardClass,
-                    )}
+                    className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
                   >
-                    <CardContent className="p-5">
-                      <div className="space-y-2.5">
-                        <h4 className="font-bold text-[14px] leading-snug">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={cn(
+                          "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                          isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
+                        )}
+                      >
+                        <Sparkles
+                          className={cn(
+                            "size-4",
+                            isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
                           {rec.title}
-                        </h4>
-                        <p className="text-xs opacity-80 leading-relaxed">
+                        </p>
+                        <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
                           {rec.reason}
                         </p>
-                        <div className="pt-2 flex items-center gap-1 text-[10px] opacity-70 border-t border-black/5 mt-2">
-                          <BookOpen className="w-3 h-3" />
-                          {rec.source}
+                        <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
+                          <BookOpen className="size-3 text-[#9B9B9B]" />
+                          <span className="text-[11px] text-[#9B9B9B] font-medium">
+                            {rec.source}
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
           </section>
         )}
 
-        {/* ✨ 오늘의 미션 */}
+        {/* ── 오늘의 미션 ── */}
         <section>
-          <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-[16px] font-black text-foreground flex items-center gap-1.5">
-              <Target className="w-[18px] h-[18px] text-emerald-500" /> 오늘의
-              미션
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
+          <div className="flex items-center justify-between mb-2.5 px-1">
+            <h2 className="text-[17px] font-bold text-[#1A2E1C]">
+              오늘의 미션
+            </h2>
+            <button
               onClick={() => setScreen("missions")}
-              className="text-emerald-600 text-xs font-bold p-0 hover:bg-transparent"
+              className="flex items-center gap-0.5 text-[13px] font-semibold text-[#2A5C34] min-h-10 min-w-10 justify-end"
             >
-              전체보기 <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-            </Button>
+              전체보기
+              <ChevronRight className="size-4" />
+            </button>
           </div>
 
-          <Card className="border-border/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] rounded-[32px] bg-white overflow-hidden">
-            <CardContent className="p-5 py-6">
-              {/* 상단 통합 달성률 */}
-              <div className="mb-8">
-                <div className="flex justify-between text-[13px] font-bold text-foreground mb-2 px-1">
-                  <span>
-                    {completedMissions}/{totalMissions} 완료
+          <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] overflow-hidden">
+            {/* 달성률 요약 */}
+            <div className="px-5 pt-5 pb-4 border-b border-black/[0.05]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[13px] font-bold text-[#3C3C3C]">
+                  {completedMissions}
+                  <span className="text-[#9B9B9B] font-medium">
+                    /{totalMissions} 완료
                   </span>
-                  <span className="text-emerald-500">
-                    {Math.round(missionProgress)}%
-                  </span>
-                </div>
-                {/* 메인 프로그레스 바: 에메랄드 색상 */}
-                <Progress
-                  value={missionProgress}
-                  className="h-2.5 bg-muted [&>div]:bg-emerald-500"
+                </p>
+                <p className="text-[13px] font-bold text-[#3C3C3C]">
+                  {Math.round(missionProgress)}%
+                </p>
+              </div>
+              <div className="h-2 bg-[#E8E6E1] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-ring rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${missionProgress}%` }}
                 />
               </div>
+            </div>
 
-              {/* 미션 리스트 */}
-              <div className="space-y-6">
-                {/* 1. 만보 걷기 */}
-                {walkingMission && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-[42px] h-[42px] bg-emerald-50 rounded-full flex items-center justify-center shrink-0">
-                      <Footprints className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex justify-between items-end mb-1.5">
-                        <h4 className="text-[14px] font-bold text-foreground">
-                          만보 걷기
-                        </h4>
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {walkingMission.current.toLocaleString()} /{" "}
-                          {walkingMission.target.toLocaleString()}
-                        </span>
-                      </div>
-                      <Progress
-                        value={
-                          (walkingMission.current / walkingMission.target) * 100
-                        }
-                        className="h-1.5 bg-muted [&>div]:bg-emerald-500"
-                      />
-                    </div>
-                    <div className="shrink-0 w-14" />{" "}
-                    {/* 버튼 없는 자리 맞춤 */}
-                  </div>
-                )}
+            {/* 미션 개별 행 */}
+            <div className="divide-y divide-black/[0.04]">
+              {/* 만보 걷기 — Sub Green #CBF891 */}
+              {walkingMission && (
+                <MissionRow
+                  icon={<Footprints className="size-4 text-[#3E8C28]" />}
+                  iconBg="bg-[#ADEED9]"
+                  title="만보 걷기"
+                  valueLabel={`${walkingMission.current.toLocaleString()} / ${walkingMission.target.toLocaleString()}`}
+                  progress={
+                    (walkingMission.current / walkingMission.target) * 100
+                  }
+                  barColor="bg-[#ADEED9]"
+                  completed={walkingMission.completed}
+                />
+              )}
 
-                {/* 2. 물 마시기 */}
-                {waterMission && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-[42px] h-[42px] bg-blue-50 rounded-full flex items-center justify-center shrink-0">
-                      <Droplets className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex justify-between items-end mb-1.5">
-                        <h4 className="text-[14px] font-bold text-foreground">
-                          물 마시기
-                        </h4>
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {waterMission.current} / {waterMission.target}잔
-                        </span>
-                      </div>
-                      <Progress
-                        value={
-                          (waterMission.current / waterMission.target) * 100
-                        }
-                        className="h-1.5 bg-muted [&>div]:bg-blue-500"
-                      />
-                    </div>
-                    {!waterMission.completed ? (
-                      <div className="shrink-0 w-14 flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-0 w-[50px] text-[11px] font-bold rounded-2xl border-border bg-muted/30 text-foreground"
-                          onClick={handleWaterAdd}
-                        >
-                          +1잔
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="shrink-0 w-14" />
-                    )}
-                  </div>
-                )}
+              {/* 물 마시기 — Accent Blue #AEE1F9 */}
+              {waterMission && (
+                <MissionRow
+                  icon={<Droplets className="size-4 text-[#2878B0]" />}
+                  iconBg="bg-[#AEE1F9]"
+                  title="물 마시기"
+                  valueLabel={`${waterMission.current} / ${waterMission.target}잔`}
+                  progress={(waterMission.current / waterMission.target) * 100}
+                  barColor="bg-[#AEE1F9]"
+                  completed={waterMission.completed}
+                  action={
+                    <button
+                      onClick={handleWaterAdd}
+                      className="h-8 px-3 text-[12px] font-bold text-[#2878B0] bg-[#AEE1F9] rounded-full border border-[#2878B0]/15 min-w-[48px]"
+                    >
+                      +1잔
+                    </button>
+                  }
+                />
+              )}
 
-                {/* ✨ 3. 식단 기록 (다시 추가됨!) */}
-                {dietMission && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-[42px] h-[42px] bg-orange-50 rounded-full flex items-center justify-center shrink-0">
-                      <Apple className="w-5 h-5 text-orange-500" />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex justify-between items-end mb-1.5">
-                        <h4 className="text-[14px] font-bold text-foreground">
-                          식단 기록
-                        </h4>
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {dietMission.current} / {dietMission.target}끼
-                        </span>
-                      </div>
-                      <Progress
-                        value={(dietMission.current / dietMission.target) * 100}
-                        className="h-1.5 bg-muted [&>div]:bg-orange-500"
-                      />
-                    </div>
-                    {!dietMission.completed ? (
-                      <div className="shrink-0 w-14 flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-0 w-[50px] text-[11px] font-bold rounded-2xl border-border bg-muted/30 text-foreground"
-                          onClick={() => setScreen("diet")}
-                        >
-                          기록
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="shrink-0 w-14" />
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              {/* 식단 기록 — Accent Yellow #FFF383 */}
+              {dietMission && (
+                <MissionRow
+                  icon={<Apple className="size-4 text-[#8C7010]" />}
+                  iconBg="bg-[#FFF383]"
+                  title="식단 기록"
+                  valueLabel={`${dietMission.current} / ${dietMission.target}끼`}
+                  progress={(dietMission.current / dietMission.target) * 100}
+                  barColor="bg-[#F4F683]"
+                  completed={dietMission.completed}
+                  action={
+                    <button
+                      onClick={() => setScreen("diet")}
+                      className="h-8 px-3 text-[12px] font-bold text-[#8C7010] bg-[#FFF9A0] rounded-full border border-[#8C7010]/15 min-w-[48px]"
+                    >
+                      기록
+                    </button>
+                  }
+                />
+              )}
+            </div>
+          </div>
         </section>
       </div>
 
+      {/* ── 하단 내비게이션 ── */}
       <BottomNav />
 
-      {/* 모달 영역 유지 */}
+      {/* ── 모달 ── */}
       <OfflinePenaltyModal
         open={showPenaltyModal}
         onClose={() => setShowPenaltyModal(false)}
       />
 
       <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent showCloseButton={false} className="text-center">
           <DialogTitle className="sr-only">주간 건강 리포트 알림</DialogTitle>
-          <div className="flex flex-col items-center py-6 space-y-4 text-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-              <TrendingUp className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground">
-              주간 건강 리포트 도착! 💌
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              이번 주 건강 점수와 AI가 분석한
-              <br />
-              맞춤 피드백이 준비되었어요.
-            </p>
-            <div className="flex gap-3 w-full pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowReportModal(false)}
-              >
-                나중에 보기
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  setShowReportModal(false);
-                  setScreen("report");
-                }}
-              >
-                확인하러 가기
-              </Button>
-            </div>
+
+          {/* 아이콘 헤더 */}
+          <div className="size-14 rounded-full bg-[#CBF891] flex items-center justify-center mx-auto mb-1">
+            <TrendingUp className="size-7 text-[#3E8C28]" strokeWidth={2} />
+          </div>
+
+          {/* 제목 */}
+          <p className="text-[18px] font-bold text-[#3C3C3C] leading-snug">
+            주간 건강 리포트 도착! 💌
+          </p>
+
+          {/* 설명 */}
+          <p className="text-[13px] text-[#7A7A7A] leading-normal mt-2">
+            이번 주 건강 점수와 AI가 분석한
+            <br />
+            맞춤 피드백이 준비되었어요.
+          </p>
+
+          {/* 버튼 */}
+          <div className="flex gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+              onClick={() => setShowReportModal(false)}
+            >
+              나중에 보기
+            </Button>
+            <Button
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+              onClick={() => {
+                setShowReportModal(false);
+                setScreen("report");
+              }}
+            >
+              확인하러 가기
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

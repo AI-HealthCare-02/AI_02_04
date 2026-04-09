@@ -2,359 +2,419 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollHeader } from "@/components/ui/scroll-header";
+import { useScrollHeader } from "@/hooks/use-scroll-header";
 import {
   ArrowLeft,
   TrendingUp,
   AlertCircle,
   ThumbsUp,
   Target as TargetIcon,
-  Info,
   CheckCircle2,
+  Footprints,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const weeklyScore = 85;
+
+const wordCloudData = [
+  { text: "샐러드",   size: "text-[22px]", healthy: true  },
+  { text: "라면",     size: "text-[18px]", healthy: false },
+  { text: "닭가슴살", size: "text-[20px]", healthy: true  },
+  { text: "믹스커피", size: "text-[15px]", healthy: false },
+  { text: "현미밥",   size: "text-[18px]", healthy: true  },
+  { text: "빵",       size: "text-[20px]", healthy: false },
+  { text: "아몬드",   size: "text-[15px]", healthy: true  },
+];
+
+const weekDayActivity = [
+  { day: "월", level: 1 },
+  { day: "화", level: 0 },
+  { day: "수", level: 0 },
+  { day: "목", level: 1 },
+  { day: "금", level: 1 },
+  { day: "토", level: 1 },
+  { day: "일", level: 1 },
+];
+
+// 활동 레벨별 색상
+const activityColor = (level: number) =>
+  level === 1 ? { bg: "#CBF891", text: "#3E8C28" } : { bg: "#F0F0F0", text: "#9B9B9B" };
+
 export function ReportScreen() {
   const { setScreen } = useAppStore();
+  const isScrolled = useScrollHeader();
   const [missionAdjusted, setMissionAdjusted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  // 모의 데이터
-  const weeklyScore = 85;
-  const wordCloudData = [
-    { text: "샐러드", weight: "text-3xl", color: "text-blue-500" },
-    { text: "라면", weight: "text-xl", color: "text-red-500" },
-    { text: "닭가슴살", weight: "text-2xl", color: "text-blue-400" },
-    { text: "믹스커피", weight: "text-lg", color: "text-red-400" },
-    { text: "현미밥", weight: "text-xl", color: "text-blue-500" },
-    { text: "빵", weight: "text-2xl", color: "text-red-500" },
-    { text: "아몬드", weight: "text-lg", color: "text-blue-400" },
-  ];
 
   const handleAdjustMission = () => {
     setMissionAdjusted(true);
     setShowConfirmModal(false);
   };
 
+  // 원형 그래프 계산
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (weeklyScore / 100) * circumference;
+
+  // 섹션 레이블 컴포넌트
+  const SectionLabel = ({
+    icon: Icon,
+    title,
+    iconBg,
+    iconColor,
+  }: {
+    icon: React.ElementType;
+    title: string;
+    iconBg: string;
+    iconColor: string;
+  }) => (
+    <div className="flex items-center gap-2.5 mb-3 px-1">
+      <div
+        className="size-7 rounded-lg flex items-center justify-center"
+        style={{ backgroundColor: iconBg }}
+      >
+        <Icon className="size-3.5" style={{ color: iconColor }} strokeWidth={2} />
+      </div>
+      <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">
+        {title}
+      </p>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-12">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md p-4 flex items-center gap-4 border-b border-border/50">
-        <Button variant="ghost" size="icon" onClick={() => setScreen("home")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-foreground">
-            주간 건강 리포트
-          </h1>
-          <p className="text-sm text-muted-foreground">3월 3주차 분석 결과</p>
+    <div className="min-h-screen bg-[#FAFAFA] pb-12">
+      {/* ── 스크롤 컴팩트 헤더 ── */}
+      <ScrollHeader
+        title="주간 건강 리포트"
+        onBack={() => setScreen("report-list")}
+        visible={isScrolled}
+      />
+
+      {/* ── 기본 헤더 ── */}
+      <div className="bg-white border-b border-black/[0.06]">
+        <div className="flex items-center gap-1 px-4 pt-12 pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setScreen("report-list")}
+            className="shrink-0 text-[#3C3C3C]"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div className="ms-1">
+            <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">주간 건강 리포트</h1>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">3월 3주차 분석 결과</p>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* 섹션 1: 주간 요약 (Hero) */}
-        <section className="flex flex-col items-center justify-center py-6">
-          <div className="relative w-40 h-40 flex items-center justify-center">
-            <svg
-              className="w-full h-full transform -rotate-90"
-              viewBox="0 0 100 100"
-            >
+      <div className="px-5 pt-5 space-y-4">
+
+        {/* ══════════════════════════
+            1. 주간 점수 히어로
+        ══════════════════════════ */}
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6 flex flex-col items-center">
+          {/* 원형 프로그레스 */}
+          <div className="relative size-36 flex items-center justify-center mb-4">
+            <svg className="size-full -rotate-90 absolute" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r={radius} fill="none" stroke="#E8E8E8" strokeWidth="10" />
               <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                className="text-muted/30"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                strokeDasharray={`${2 * Math.PI * 45}`}
-                strokeDashoffset={`${2 * Math.PI * 45 * (1 - weeklyScore / 100)}`}
-                className="text-primary transition-all duration-1000 ease-out"
+                cx="64" cy="64" r={radius}
+                fill="none" stroke="#3E8C28" strokeWidth="10"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
               />
             </svg>
-            <div className="absolute flex flex-col items-center">
-              <span className="text-4xl font-bold text-primary">
+            <div className="relative z-10 flex flex-col items-center">
+              <span className="text-[42px] font-black text-[#3E8C28] leading-none">
                 {weeklyScore}
               </span>
-              <span className="text-sm text-muted-foreground">/ 100점</span>
+              <span className="text-[12px] font-bold text-[#9B9B9B]">/ 100점</span>
             </div>
           </div>
-          <h2 className="mt-4 text-xl font-bold text-foreground">
-            이번 주 건강 점수는 {weeklyScore}점!
+
+          <h2 className="text-[18px] font-bold text-[#2A2A2A]">
+            이번 주 건강 점수 {weeklyScore}점!
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            지난주보다 5점 상승했어요 👏
-          </p>
-        </section>
 
-        {/* 섹션 2: 일일 미션 달성도 */}
-        <section className="space-y-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-primary" />
-            미션 달성 현황
-          </h3>
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex justify-between items-center bg-primary/5 p-3 rounded-xl">
-                <span className="font-medium">
-                  🔥 3주 연속 주간 목표 달성 중!
-                </span>
+          {/* 전주 대비 */}
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-1 text-[#3E8C28]">
+              <TrendingUp className="size-4" strokeWidth={2.5} />
+              <span className="text-[14px] font-bold">+5점</span>
+            </div>
+            <span className="text-[13px] text-[#7A7A7A] font-medium">지난주보다 상승했어요 👏</span>
+          </div>
+
+          {/* 점수 범례 */}
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#F5F5F5] w-full justify-center">
+            {[
+              { label: "우수", range: "90↑", bg: "#E8F9D6", color: "#3E8C28" },
+              { label: "양호", range: "80↑", bg: "#CBF891", color: "#2A6020" },
+              { label: "보통", range: "70↑", bg: "#FFF383", color: "#8C7010" },
+              { label: "분발", range: "~69", bg: "#FFB8CA", color: "#C0305A" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-1">
+                <div className="size-2.5 rounded-full" style={{ backgroundColor: item.bg, border: `1.5px solid ${item.color}` }} />
+                <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.label}</span>
               </div>
+            ))}
+          </div>
+        </div>
 
-              <div>
-                <span className="text-xs text-muted-foreground mb-2 block">
-                  요일별 활동량
-                </span>
-                <div className="flex justify-between gap-1">
-                  {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => (
-                    <div key={day} className="flex flex-col items-center gap-1">
+        {/* ══════════════════════════
+            2. 미션 달성 현황
+        ══════════════════════════ */}
+        <div>
+          <SectionLabel icon={CheckCircle2} title="미션 달성 현황" iconBg="#CBF891" iconColor="#3E8C28" />
+
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 space-y-4">
+            {/* 연속 달성 배너 */}
+            <div className="flex items-center gap-3 bg-[#F0FDF4] rounded-xl px-4 py-3 border border-[#CBF891]">
+              <span className="text-[18px]">🔥</span>
+              <p className="text-[14px] font-bold text-[#2A6020]">3주 연속 주간 목표 달성 중!</p>
+            </div>
+
+            {/* 요일별 활동량 */}
+            <div>
+              <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em] mb-3">
+                요일별 활동량
+              </p>
+              <div className="flex justify-between gap-1.5">
+                {weekDayActivity.map(({ day, level }) => {
+                  const c = activityColor(level);
+                  return (
+                    <div key={day} className="flex flex-col items-center gap-1.5 flex-1">
                       <div
-                        className={cn(
-                          "w-8 h-8 rounded-md",
-                          i === 1 || i === 2 ? "bg-primary/20" : "bg-primary",
+                        className="w-full h-10 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: c.bg }}
+                      >
+                        {level === 1 && (
+                          <CheckCircle2 className="size-4" style={{ color: c.text }} />
                         )}
-                      />
-                      <span className="text-xs text-muted-foreground">
+                      </div>
+                      <span className="text-[11px] font-bold" style={{ color: c.text }}>
                         {day}
                       </span>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="mt-4 bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-orange-700 dark:text-orange-400 mb-1">
-                      AI 챌린지 조정 제안
-                    </h4>
-                    <p className="text-sm text-orange-600/80 dark:text-orange-300 mb-3">
-                      화/수요일에 '10,000보 걷기' 미션 달성에 어려움이
-                      있었습니다. 무리한 목표는 스트레스를 줄 수 있어요.
-                    </p>
-                    <div className="flex items-center gap-2 bg-background/50 p-2 rounded-lg mb-3">
-                      <span className="text-sm line-through text-muted-foreground">
-                        10,000보
-                      </span>
-                      <ArrowLeft className="w-4 h-4 rotate-180 text-orange-500" />
-                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                        5,000보 (조정)
-                      </span>
+            {/* AI 조정 제안 */}
+            <div className="rounded-2xl border border-[#FFF383] bg-[#FFFDF0] p-4">
+              <div className="flex items-start gap-3">
+                <div className="size-8 rounded-xl bg-[#FFF383] flex items-center justify-center shrink-0">
+                  <AlertCircle className="size-4 text-[#8C7010]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-bold text-[#5C4A00] mb-1">AI 챌린지 조정 제안</p>
+                  <p className="text-[13px] text-[#8C7010] leading-relaxed mb-3">
+                    화·수요일에 '10,000보 걷기' 달성이 어려웠어요. 무리한 목표는 스트레스를 줄 수 있어요.
+                  </p>
+                  {/* 조정 전후 비교 */}
+                  <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2.5 mb-3 border border-[#F0E8C8]">
+                    <div className="flex items-center gap-1.5">
+                      <Footprints className="size-3.5 text-[#9B9B9B]" />
+                      <span className="text-[13px] line-through text-[#9B9B9B]">10,000보</span>
                     </div>
-                    {missionAdjusted ? (
-                      <div className="text-sm font-medium text-success flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4" /> 목표가 성공적으로
-                        조정되었습니다!
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 bg-background"
-                          onClick={() => setShowConfirmModal(true)}
-                        >
-                          유지하기
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
-                          onClick={handleAdjustMission}
-                        >
-                          적용하기
-                        </Button>
-                      </div>
-                    )}
+                    <ArrowRight className="size-3.5 text-[#8C7010]" />
+                    <div className="flex items-center gap-1.5">
+                      <Footprints className="size-3.5 text-[#8C7010]" />
+                      <span className="text-[13px] font-bold text-[#8C7010]">5,000보 (조정)</span>
+                    </div>
                   </div>
+
+                  {missionAdjusted ? (
+                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#3E8C28]">
+                      <CheckCircle2 className="size-4" />
+                      목표가 성공적으로 조정되었습니다!
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-10 text-[13px] font-bold rounded-xl border-[#E0D8B0] text-[#7A7A7A]"
+                        onClick={() => setShowConfirmModal(true)}
+                      >
+                        유지하기
+                      </Button>
+                      <Button
+                        className="flex-1 h-10 text-[13px] font-bold rounded-xl bg-[#8C7010] hover:bg-[#6A5208] text-white border-0"
+                        onClick={handleAdjustMission}
+                      >
+                        적용하기
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* 섹션 3: AI 식단 및 영양 분석 */}
-        <section className="space-y-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            주간 식단 & 영양 분석
-          </h3>
-          <Card>
-            <CardContent className="p-4 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="relative w-24 h-24 shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-full h-full">
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth="4"
-                      strokeDasharray="50 50"
-                    />
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth="4"
-                      strokeDasharray="30 70"
-                      strokeDashoffset="-50"
-                    />
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="4"
-                      strokeDasharray="20 80"
-                      strokeDashoffset="-80"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-amber-500 font-medium">
-                      탄수화물 50%
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      권장 45%
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-red-500 font-medium">단백질 30%</span>
-                    <span className="text-muted-foreground text-xs">
-                      권장 30%
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-blue-500 font-medium">지방 20%</span>
-                    <span className="text-muted-foreground text-xs">
-                      권장 25%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-muted/30 p-4 rounded-xl border border-border/50">
-                <span className="text-xs text-muted-foreground mb-3 block">
-                  이번 주 자주 먹은 음식
-                </span>
-                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
-                  {wordCloudData.map((word, index) => (
-                    <span
-                      key={index}
-                      className={cn(
-                        "font-bold transition-all hover:scale-110",
-                        word.weight,
-                        word.color,
-                      )}
-                    >
-                      {word.text}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* 섹션 4: LLM 주간 브리핑 */}
-        <section className="space-y-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Info className="w-5 h-5 text-primary" />
-            AI 주간 브리핑
-          </h3>
-          <div className="space-y-3">
-            <Card className="bg-blue-500/5 border-blue-500/20">
-              <CardContent className="p-4 flex gap-3">
-                <ThumbsUp className="w-5 h-5 text-blue-500 shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-1">
-                    정말 잘하셨어요!
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    수요일과 목요일에 식이섬유가 풍부한 식단을 완벽히
-                    지켜주셨어요! 혈당 관리에 아주 좋은 습관입니다.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-red-500/5 border-red-500/20">
-              <CardContent className="p-4 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-red-700 dark:text-red-400 mb-1">
-                    조금 아쉬워요
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    주말에 정제 탄수화물(빵, 면) 섭취 빈도가 평일 대비 40%
-                    증가했습니다. 다음 주말엔 통곡물 빵으로 대체해 보는 건
-                    어떨까요?
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4 flex gap-3">
-                <TargetIcon className="w-5 h-5 text-primary shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-primary mb-1">
-                    다음 주 전략 제안
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    다음 주에는 식후 15분 걷기 미션을 매일 달성하여 식후 혈당
-                    스파이크를 잡아볼까요?
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           </div>
-        </section>
+        </div>
 
-        {/* 섹션 5: 면책 조항 */}
-        <p className="text-[10px] text-muted-foreground text-center pt-4 pb-8">
-          본 리포트는 생활 습관 참고용이며, 의학적 진단을 대체하지 않습니다.
-          <br />
-          필요시 반드시 전문 의료진과 상담하시기 바랍니다.
+        {/* ══════════════════════════
+            3. 식단 & 영양 분석
+        ══════════════════════════ */}
+        <div>
+          <SectionLabel icon={TrendingUp} title="주간 식단 & 영양 분석" iconBg="#AEE1F9" iconColor="#2878B0" />
+
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 space-y-5">
+            {/* 영양소 비율 */}
+            <div className="flex items-center gap-5">
+              {/* 도넛 차트 */}
+              <div className="relative size-24 shrink-0">
+                <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#FFF383" strokeWidth="4" strokeDasharray="50 50" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#FFB8CA" strokeWidth="4" strokeDasharray="30 70" strokeDashoffset="-50" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#AEE1F9" strokeWidth="4" strokeDasharray="20 80" strokeDashoffset="-80" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-[10px] font-bold text-[#6A6A6A]">영양소</p>
+                </div>
+              </div>
+
+              {/* 범례 */}
+              <div className="flex-1 space-y-2.5">
+                {[
+                  { label: "탄수화물", pct: 50, goal: 45, bg: "#FFF9D6", color: "#8C7010", dot: "#FFF383" },
+                  { label: "단백질",   pct: 30, goal: 30, bg: "#FFE4ED", color: "#C0305A", dot: "#FFB8CA" },
+                  { label: "지방",     pct: 20, goal: 25, bg: "#D6EEFF", color: "#2878B0", dot: "#AEE1F9" },
+                ].map((n) => (
+                  <div key={n.label} className="flex items-center gap-2">
+                    <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: n.dot }} />
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[12px] font-bold" style={{ color: n.color }}>{n.label} {n.pct}%</span>
+                        <span className="text-[10px] font-medium text-[#9B9B9B]">권장 {n.goal}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full" style={{ backgroundColor: n.dot }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${(n.pct / (n.goal * 1.5)) * 100}%`, backgroundColor: n.color, opacity: 0.7 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 구분선 */}
+            <div className="h-px bg-[#F5F5F5]" />
+
+            {/* 자주 먹은 음식 워드 클라우드 */}
+            <div>
+              <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em] mb-3">
+                이번 주 자주 먹은 음식
+              </p>
+              <div className="bg-[#FAFAFA] rounded-xl p-4 flex flex-wrap justify-center items-center gap-x-3 gap-y-2.5">
+                {wordCloudData.map((word, i) => (
+                  <span
+                    key={i}
+                    className={cn("font-black", word.size)}
+                    style={{ color: word.healthy ? "#3E8C28" : "#C0305A" }}
+                  >
+                    {word.text}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-4 justify-center mt-2.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2 rounded-full bg-[#87D57B]" />
+                  <span className="text-[10px] font-medium text-[#7A7A7A]">건강 식품</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2 rounded-full bg-[#F09BB0]" />
+                  <span className="text-[10px] font-medium text-[#7A7A7A]">주의 식품</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════
+            4. AI 주간 브리핑
+        ══════════════════════════ */}
+        <div>
+          <SectionLabel icon={TargetIcon} title="AI 주간 브리핑" iconBg="#CBF891" iconColor="#3E8C28" />
+
+          <div className="space-y-2.5">
+            {/* 잘한 점 */}
+            <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 flex gap-3.5">
+              <div className="size-9 rounded-xl bg-[#E8F9D6] flex items-center justify-center shrink-0">
+                <ThumbsUp className="size-4 text-[#3E8C28]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">정말 잘하셨어요!</p>
+                <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
+                  수요일과 목요일에 식이섬유가 풍부한 식단을 완벽히 지켜주셨어요! 혈당 관리에 아주 좋은 습관입니다.
+                </p>
+              </div>
+            </div>
+
+            {/* 아쉬운 점 */}
+            <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 flex gap-3.5">
+              <div className="size-9 rounded-xl bg-[#FFE4ED] flex items-center justify-center shrink-0">
+                <AlertCircle className="size-4 text-[#C0305A]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">조금 아쉬워요</p>
+                <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
+                  주말에 정제 탄수화물(빵, 면) 섭취 빈도가 평일 대비 40% 증가했습니다. 다음 주말엔 통곡물 빵으로 대체해 보는 건 어떨까요?
+                </p>
+              </div>
+            </div>
+
+            {/* 다음 주 전략 */}
+            <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 flex gap-3.5">
+              <div className="size-9 rounded-xl bg-[#AEE1F9] flex items-center justify-center shrink-0">
+                <TargetIcon className="size-4 text-[#2878B0]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">다음 주 전략 제안</p>
+                <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
+                  다음 주에는 식후 15분 걷기 미션을 매일 달성하여 식후 혈당 스파이크를 잡아볼까요?
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 면책 조항 */}
+        <p className="text-[11px] text-[#C8C8C8] text-center leading-relaxed pt-2 pb-4">
+          본 리포트는 생활 습관 참고용이며, 의학적 진단을 대체하지 않습니다.<br />
+          필요 시 반드시 전문 의료진과 상담하시기 바랍니다.
         </p>
       </div>
 
+      {/* ── 유지하기 확인 모달 ── */}
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>기존 목표를 유지할까요?</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              무리한 목표는 금방 지칠 수 있어요. 하지만 할 수 있다면 기존
-              10,000보 목표를 유지해 보겠습니다!
-            </p>
+        <DialogContent showCloseButton={false}>
+          <div className="size-14 rounded-full bg-[#FFF383] flex items-center justify-center mx-auto mb-1">
+            <TargetIcon className="size-7 text-[#8C7010]" strokeWidth={2} />
           </div>
-          <div className="flex gap-2 w-full">
+          <DialogTitle className="text-center">기존 목표를 유지할까요?</DialogTitle>
+          <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-2">
+            무리한 목표는 금방 지칠 수 있어요.<br />
+            그래도 10,000보 목표를 유지하시겠어요?
+          </p>
+          <div className="flex gap-3 mt-5">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
               onClick={() => setShowConfirmModal(false)}
             >
-              다시 생각할래요
+              다시 생각할게요
             </Button>
             <Button
-              className="flex-1"
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
               onClick={() => setShowConfirmModal(false)}
             >
               유지하기

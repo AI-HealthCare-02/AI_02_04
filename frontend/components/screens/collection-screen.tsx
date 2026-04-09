@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { ScrollHeader } from "@/components/ui/scroll-header";
+import { useScrollHeader } from "@/hooks/use-scroll-header";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Character } from "@/components/character";
@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Star,
   Calendar,
-  Footprints,
   Award,
   Coins,
   Sparkles,
@@ -34,38 +33,54 @@ export function CollectionScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   const canGraduate = character?.level === 5;
+  const isScrolled = useScrollHeader();
 
   const handleGraduate = () => {
     graduateCharacter();
     setShowGraduationModal(false);
-    // After graduation, user would need to create a new character
     setScreen("character-birth");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-24">
-      {/* Header */}
-      <div className="p-4 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setScreen("home")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-foreground">추억 보관함</h1>
-          <p className="text-sm text-muted-foreground">별나라로 떠난 친구들</p>
-        </div>
-        <div className="flex items-center gap-1 bg-primary/10 rounded-full px-3 py-1.5">
-          <Star className="w-4 h-4 text-primary fill-current" />
-          <span className="font-semibold text-sm">
-            {graduatedCharacters.length}
-          </span>
+    <div className="min-h-screen bg-[#F9FFEF] pb-28">
+      {/* ── 스크롤 시 나타나는 컴팩트 헤더 ── */}
+      <ScrollHeader
+        title="추억 보관함"
+        onBack={() => setScreen("home")}
+        visible={isScrolled}
+      />
+
+      {/* ── 기본 헤더 (default) ── */}
+      <div className="bg-white border-b border-black/[0.06]">
+        <div className="flex items-center gap-1 px-4 pt-12 pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setScreen("home")}
+            className="shrink-0 text-[#3C3C3C]"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div className="ms-1 flex-1">
+            <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">추억 보관함</h1>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">별나라로 떠난 친구들</p>
+          </div>
+          {/* 졸업 수 뱃지 */}
+          <div className="flex items-center gap-1 bg-[#FFF383] rounded-full px-3 py-1.5">
+            <Star className="size-3.5 text-[#8C7010] fill-current" />
+            <span className="text-[13px] font-bold text-[#8C7010]">
+              {graduatedCharacters.length}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Current Character Card */}
-      {character && (
-        <div className="px-4 mb-6">
-          <Card className="bg-gradient-to-br from-primary/10 via-card to-accent/10 overflow-hidden">
-            <CardContent className="p-4">
+      <div className="px-5 pt-5 space-y-5">
+        {/* ── 현재 캐릭터 카드 ── */}
+        {character && (
+          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="p-5">
+              <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em] mb-4">현재 캐릭터</p>
               <div className="flex items-center gap-4">
                 <Character
                   mood={character.mood}
@@ -74,230 +89,203 @@ export function CollectionScreen() {
                   showPlatform={false}
                 />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground">
-                      {character.name}
-                    </h3>
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-[16px] font-bold text-[#3C3C3C]">{character.name}</h3>
+                    <span className="text-[11px] font-bold bg-[#CBF891] text-[#3E8C28] px-2 py-0.5 rounded-full">
                       현재
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Trophy className="w-3 h-3" />
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-[#7A7A7A]">
+                      <Trophy className="size-3.5 text-[#8C7010]" />
                       Lv.{character.level}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-[#7A7A7A]">
+                      <Calendar className="size-3.5 text-[#2878B0]" />
                       {Math.floor(
-                        (Date.now() - character.createdAt.getTime()) /
+                        (Date.now() - new Date(character.createdAt).getTime()) /
                           (1000 * 60 * 60 * 24),
-                      )}
-                      일째
+                      )}일째
                     </span>
                   </div>
                 </div>
-
                 {canGraduate && (
                   <Button
                     size="sm"
+                    className="h-9 px-3.5 rounded-xl text-[13px] font-bold bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 border-0 shadow-sm"
                     onClick={() => setShowGraduationModal(true)}
-                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
                   >
-                    <Rocket className="w-4 h-4 mr-1" />
+                    <Rocket className="size-3.5 mr-1" />
                     졸업
                   </Button>
                 )}
               </div>
+            </div>
 
-              {canGraduate && (
-                <div className="mt-3 p-2 bg-amber-500/10 rounded-lg">
-                  <p className="text-xs text-amber-700 text-center">
-                    축하해요! {character.name}이(가) 별나라로 떠날 준비가
-                    됐어요!
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Graduated Characters */}
-      <div className="px-4">
-        <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <Star className="w-4 h-4 text-primary" />
-          별나라의 친구들
-        </h2>
-
-        {graduatedCharacters.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                <Star className="w-8 h-8 text-muted-foreground" />
+            {/* 졸업 가능 배너 */}
+            {canGraduate && (
+              <div className="mx-5 mb-5 px-4 py-3 bg-[#FFF9D6] rounded-2xl border border-[#FFF383]">
+                <p className="text-[12px] font-bold text-[#8C6010] text-center">
+                  🎉 축하해요! {character.name}이(가) 별나라로 떠날 준비가 됐어요!
+                </p>
               </div>
-              <h3 className="font-medium text-foreground mb-2">
-                아직 졸업한 친구가 없어요
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                캐릭터를 레벨 5까지 키워서
-                <br />
-                별나라로 보내보세요!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {graduatedCharacters.map((char) => (
-              <Card
-                key={char.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => {
-                  setSelectedCharacter(char);
-                  setShowDetailModal(true);
-                }}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className="relative mb-3">
-                    <Character
-                      mood="happy"
-                      level={5}
-                      size="sm"
-                      showPlatform={false}
-                    />
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                      <Star className="w-3 h-3 text-white fill-current" />
-                    </div>
-                  </div>
-                  <h4 className="font-medium text-foreground text-sm">
-                    {char.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {char.totalDays}일 함께함
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            )}
           </div>
         )}
+
+        {/* ── 별나라의 친구들 ── */}
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <Star className="size-4 text-[#8C7010] fill-[#FFF383]" />
+            <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">별나라의 친구들</p>
+          </div>
+
+          {graduatedCharacters.length === 0 ? (
+            /* 비어있을 때 */
+            <div className="bg-white rounded-3xl border border-black/[0.06] p-10 flex flex-col items-center text-center gap-3">
+              <div className="size-16 rounded-2xl bg-[#FFF9D6] flex items-center justify-center">
+                <Star className="size-8 text-[#D97706]" />
+              </div>
+              <div>
+                <p className="text-[15px] font-bold text-[#3C3C3C] mb-1">아직 졸업한 친구가 없어요</p>
+                <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
+                  캐릭터를 레벨 5까지 키워서<br />별나라로 보내보세요!
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {graduatedCharacters.map((char) => (
+                <button
+                  key={char.id}
+                  className="bg-white rounded-3xl border border-black/[0.06] shadow-[0_1px_4px_rgba(0,0,0,0.04)] p-4 flex flex-col items-center text-center hover:bg-[#F9FFEF] hover:border-[#CBF891] transition-all active:scale-[0.98]"
+                  onClick={() => {
+                    setSelectedCharacter(char);
+                    setShowDetailModal(true);
+                  }}
+                >
+                  <div className="relative mb-3">
+                    <Character mood="happy" level={5} size="sm" showPlatform={false} />
+                    <div className="absolute -top-1 -right-1 size-6 bg-[#FFC107] rounded-full flex items-center justify-center shadow-sm">
+                      <Star className="size-3 text-white fill-current" />
+                    </div>
+                  </div>
+                  <p className="text-[14px] font-bold text-[#3C3C3C]">{char.name}</p>
+                  <p className="text-[11px] font-medium text-[#9B9B9B] mt-0.5">{char.totalDays}일 함께함</p>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <span className="text-[10px] font-bold bg-[#CBF891] text-[#3E8C28] px-2 py-0.5 rounded-full">
+                      Lv.5
+                    </span>
+                    <span className="text-[10px] font-bold bg-[#FFF383] text-[#8C7010] px-2 py-0.5 rounded-full">
+                      {char.finalStats.totalPoints}P
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <BottomNav />
 
-      {/* Graduation Modal */}
+      {/* ── 졸업 모달 ── */}
       <Dialog open={showGraduationModal} onOpenChange={setShowGraduationModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-center">별나라 졸업식</DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false}>
+          {/* 반짝임 헤더 */}
+          <div className="size-14 rounded-full bg-[#FFF383] flex items-center justify-center mx-auto mb-1">
+            <Sparkles className="size-7 text-[#D97706]" strokeWidth={2} />
+          </div>
 
-          <div className="space-y-4 py-4">
-            <div className="relative flex justify-center">
-              <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent rounded-full blur-2xl" />
-              <Character mood="happy" level={5} size="lg" />
-            </div>
+          <DialogTitle className="text-center">별나라 졸업식 🌟</DialogTitle>
+          <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
+            함께 한 시간 동안 정말 고마웠어요.<br />이제 별나라에서 행복하게 지낼 거예요!
+          </p>
 
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">
-                {character?.name}이(가) 졸업해요!
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                함께 한 시간 동안 정말 고마웠어요.
-                <br />
-                이제 별나라에서 행복하게 지낼 거예요!
-              </p>
-            </div>
+          {/* 캐릭터 */}
+          <div className="flex justify-center py-2">
+            <Character mood="happy" level={5} size="lg" />
+          </div>
 
-            <div className="flex items-center justify-center gap-1 text-amber-500">
-              <Sparkles className="w-5 h-5" />
-              <Sparkles className="w-4 h-4" />
-              <Sparkles className="w-5 h-5" />
-            </div>
+          {/* 이름 */}
+          <p className="text-[16px] font-black text-[#3C3C3C] text-center">
+            {character?.name}이(가) 졸업해요!
+          </p>
 
-            <div className="flex items-center">
-              {/* <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowGraduationModal(false)}
-              >
-                조금 더 함께하기
-              </Button> */}
-              <Button
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-                onClick={handleGraduate}
-              >
-                <Rocket className="w-4 h-4 mr-1" />
-                졸업시키기
-              </Button>
-            </div>
+          {/* 버튼 */}
+          <div className="flex gap-3 mt-5">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+              onClick={() => setShowGraduationModal(false)}
+            >
+              조금 더 함께하기
+            </Button>
+            <Button
+              className="flex-1 h-12 text-[14px] font-bold rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 border-0"
+              onClick={handleGraduate}
+            >
+              <Rocket className="size-4 me-1.5" />
+              졸업시키기
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Character Detail Modal */}
+      {/* ── 추억 카드 모달 ── */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-center">추억 카드</DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false}>
+          {/* 별 헤더 */}
+          <div className="size-14 rounded-full bg-[#FFF383] flex items-center justify-center mx-auto mb-1">
+            <Star className="size-7 text-[#D97706] fill-[#D97706]" strokeWidth={1.5} />
+          </div>
+
+          <DialogTitle className="text-center">추억 카드</DialogTitle>
 
           {selectedCharacter && (
-            <div className="space-y-4 py-4">
-              <div className="relative flex justify-center">
-                <div className="absolute inset-0 bg-amber-500/10 rounded-full blur-2xl" />
+            <>
+              {/* 캐릭터 */}
+              <div className="flex justify-center py-1">
                 <Character mood="happy" level={5} size="lg" />
               </div>
 
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-foreground flex items-center justify-center gap-2">
-                  <Star className="w-5 h-5 text-amber-500 fill-current" />
-                  {selectedCharacter.name}
-                  <Star className="w-5 h-5 text-amber-500 fill-current" />
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {new Date(selectedCharacter.startDate).toLocaleDateString(
-                    "ko-KR",
-                  )}{" "}
-                  ~
-                  {new Date(selectedCharacter.endDate).toLocaleDateString(
-                    "ko-KR",
-                  )}
-                </p>
-              </div>
+              {/* 이름 + 기간 */}
+              <p className="text-[18px] font-black text-[#3C3C3C] text-center flex items-center justify-center gap-1.5">
+                <Star className="size-4 text-[#FFC107] fill-[#FFC107]" />
+                {selectedCharacter.name}
+                <Star className="size-4 text-[#FFC107] fill-[#FFC107]" />
+              </p>
+              <p className="text-[12px] text-[#9B9B9B] text-center mt-0.5">
+                {new Date(selectedCharacter.startDate).toLocaleDateString("ko-KR")} ~{" "}
+                {new Date(selectedCharacter.endDate).toLocaleDateString("ko-KR")}
+              </p>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-3 bg-primary/10 rounded-xl">
-                  <Calendar className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <div className="text-lg font-bold text-foreground">
-                    {selectedCharacter.totalDays}
-                  </div>
-                  <div className="text-xs text-muted-foreground">함께한 날</div>
+              {/* 스탯 3개 */}
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="flex flex-col items-center gap-1 py-3.5 bg-[#CBF891] rounded-2xl">
+                  <Calendar className="size-5 text-[#3E8C28]" />
+                  <p className="text-[17px] font-black text-[#1A2E1C] leading-none">{selectedCharacter.totalDays}</p>
+                  <p className="text-[10px] font-bold text-[#3E8C28]">함께한 날</p>
                 </div>
-                <div className="text-center p-3 bg-success/10 rounded-xl">
-                  <Award className="w-5 h-5 text-success mx-auto mb-1" />
-                  <div className="text-lg font-bold text-foreground">
-                    {selectedCharacter.finalStats.totalMissions}
-                  </div>
-                  <div className="text-xs text-muted-foreground">완료 미션</div>
+                <div className="flex flex-col items-center gap-1 py-3.5 bg-[#AEE1F9] rounded-2xl">
+                  <Award className="size-5 text-[#2878B0]" />
+                  <p className="text-[17px] font-black text-[#0D2E50] leading-none">{selectedCharacter.finalStats.totalMissions}</p>
+                  <p className="text-[10px] font-bold text-[#2878B0]">완료 미션</p>
                 </div>
-                <div className="text-center p-3 bg-amber-500/10 rounded-xl">
-                  <Coins className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-                  <div className="text-lg font-bold text-foreground">
-                    {selectedCharacter.finalStats.totalPoints}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    획득 포인트
-                  </div>
+                <div className="flex flex-col items-center gap-1 py-3.5 bg-[#FFF383] rounded-2xl">
+                  <Coins className="size-5 text-[#8C7010]" />
+                  <p className="text-[17px] font-black text-[#3C2A00] leading-none">{selectedCharacter.finalStats.totalPoints}</p>
+                  <p className="text-[10px] font-bold text-[#8C7010]">획득 포인트</p>
                 </div>
               </div>
 
               <Button
-                className="w-full"
+                className="w-full h-12 text-[14px] font-bold rounded-2xl mt-5"
                 onClick={() => setShowDetailModal(false)}
               >
                 닫기
               </Button>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

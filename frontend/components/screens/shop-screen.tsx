@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Character } from "@/components/character";
@@ -204,95 +203,83 @@ export function ShopScreen() {
 
       <BottomNav />
 
-      {/* Purchase Modal */}
+      {/* ── 구매 모달 ── */}
       <Dialog open={showPurchaseModal} onOpenChange={setShowPurchaseModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>아이템 구매</DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="text-center">
+          <DialogTitle className="text-center">아이템 구매</DialogTitle>
 
           {selectedItem && (
-            <div className="space-y-4">
-              <div className="aspect-square bg-muted rounded-xl flex items-center justify-center">
+            <>
+              {/* 아이템 아이콘 */}
+              <div className="size-20 bg-[#F0FDF4] rounded-2xl flex items-center justify-center mx-auto mt-3 mb-1">
                 {getCategoryIcon(selectedItem.category)}
               </div>
 
-              <div className="text-center space-y-1">
-                <h3 className="font-semibold text-foreground">
-                  {selectedItem.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedItem.description}
-                </p>
+              {/* 이름 + 설명 */}
+              <p className="text-[15px] font-bold text-[#3C3C3C] mt-1">{selectedItem.name}</p>
+              <p className="text-[13px] text-[#7A7A7A] leading-normal mt-1">{selectedItem.description}</p>
+
+              {/* 가격 */}
+              <div className="flex items-center justify-center gap-2 bg-[#FFF9A0] rounded-2xl px-5 py-3 mt-4">
+                <Coins className="size-5 text-[#8C7010]" />
+                <span className="text-[20px] font-black text-[#8C7010]">{selectedItem.price.toLocaleString()}</span>
+                <span className="text-[14px] font-bold text-[#8C7010]">P</span>
               </div>
 
-              <div className="flex items-center justify-center gap-2 bg-amber-500/10 rounded-xl p-3">
-                <Coins className="w-5 h-5 text-amber-500" />
-                <span className="text-xl font-bold">{selectedItem.price}P</span>
-              </div>
-
+              {/* 포인트 부족 경고 */}
               {userProfile && userProfile.points < selectedItem.price && (
-                <p className="text-sm text-destructive text-center">
-                  포인트가 부족합니다
+                <p className="text-[12px] font-semibold text-[#E53E3E] mt-2">
+                  포인트가 부족합니다 (보유: {userProfile.points.toLocaleString()}P)
                 </p>
               )}
 
-              <div className="flex gap-3">
+              {/* 버튼 */}
+              <div className="flex gap-3 mt-5">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
                   onClick={() => setShowPurchaseModal(false)}
                 >
                   취소
                 </Button>
                 <Button
-                  className="flex-1"
-                  disabled={
-                    !userProfile || userProfile.points < selectedItem.price
-                  }
+                  className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
+                  disabled={!userProfile || userProfile.points < selectedItem.price}
                   onClick={() => handlePurchase(selectedItem)}
                 >
                   구매하기
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Preview/Equip Modal */}
+      {/* ── 아이템 미리보기 / 장착 모달 ── */}
       <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>아이템 미리보기</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="text-center">
+          <DialogTitle className="text-center">아이템 미리보기</DialogTitle>
 
           {selectedItem && (
-            <div className="space-y-4">
+            <>
+              {/* 캐릭터 프리뷰 */}
               <div className="flex justify-center py-4">
                 <Character mood="happy" size="lg" />
               </div>
 
-              <div className="text-center space-y-1">
-                <h3 className="font-semibold text-foreground">
-                  {selectedItem.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedItem.description}
-                </p>
-              </div>
+              {/* 이름 + 설명 */}
+              <p className="text-[15px] font-bold text-[#3C3C3C]">{selectedItem.name}</p>
+              <p className="text-[13px] text-[#7A7A7A] leading-normal mt-1">{selectedItem.description}</p>
 
+              {/* 버튼 */}
               <Button
-                className="w-full"
+                className="w-full h-12 text-[14px] font-bold rounded-2xl mt-5"
                 variant={selectedItem.equipped ? "outline" : "default"}
-                onClick={() => {
-                  handleEquip(selectedItem);
-                  setShowPreviewModal(false);
-                }}
+                onClick={() => { handleEquip(selectedItem); setShowPreviewModal(false); }}
               >
                 {selectedItem.equipped ? "장착 해제" : "장착하기"}
               </Button>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
