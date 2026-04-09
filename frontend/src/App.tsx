@@ -1,0 +1,84 @@
+import { useEffect, useState } from "react";
+import { useAppStore } from "@/lib/store";
+import { SplashScreen } from "@/components/screens/splash-screen";
+import { LoginScreen } from "@/components/screens/login-screen";
+import { OnboardingScreen } from "@/components/screens/onboarding-screen";
+import { HealthInfoScreen } from "@/components/screens/health-info-screen";
+import { AnalysisScreen } from "@/components/screens/analysis-screen";
+import { PermissionsScreen } from "@/components/screens/permissions-screen";
+import { CharacterBirthScreen } from "@/components/screens/character-birth-screen";
+import { HomeScreen } from "@/components/screens/home-screen";
+import { MissionsScreen } from "@/components/screens/missions-screen";
+import { DietScreen } from "@/components/screens/diet-screen";
+import { ShopScreen } from "@/components/screens/shop-screen";
+import { CollectionScreen } from "@/components/screens/collection-screen";
+import { ReportScreen } from "@/components/screens/report-screen";
+import { ReportListScreen } from "@/components/screens/report-list-screen";
+import { MyPageScreen } from "@/components/screens/mypage-screen";
+import { DailyLogScreen } from "@/components/screens/daily-log-screen";
+import { DataSyncScreen } from "@/components/screens/data-sync-screen";
+import { NotificationSettingsScreen } from "@/components/screens/notification-settings-screen";
+import { EditHealthInfoScreen } from "@/components/screens/edit-health-info-screen";
+import { Toaster } from "@/components/ui/toaster";
+
+export default function App() {
+  const { currentScreen, resetApp } = useAppStore();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [currentScreen]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <main className="min-h-screen max-w-md mx-auto bg-background relative overflow-hidden">
+        <div className="min-h-screen">
+          <SplashScreen />
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen max-w-md mx-auto bg-background relative overflow-hidden">
+      {currentScreen !== "splash" && currentScreen !== "login" && (
+        <button
+          onClick={resetApp}
+          className="fixed top-2 right-2 z-50 px-2 py-1 text-xs bg-muted/80 text-muted-foreground rounded-md hover:bg-muted transition-colors"
+        >
+          초기화 (테스트용)
+        </button>
+      )}
+
+      <div className="min-h-screen">
+        {currentScreen === "splash" && <SplashScreen />}
+        {currentScreen === "login" && <LoginScreen />}
+        {currentScreen === "onboarding" && <OnboardingScreen />}
+        {currentScreen === "health-info" && <HealthInfoScreen />}
+        {currentScreen === "analysis" && <AnalysisScreen />}
+        {currentScreen === "permissions" && <PermissionsScreen />}
+        {currentScreen === "character-birth" && <CharacterBirthScreen />}
+        {currentScreen === "home" && <HomeScreen />}
+        {currentScreen === "missions" && <MissionsScreen />}
+        {currentScreen === "diet" && <DietScreen />}
+        {currentScreen === "shop" && <ShopScreen />}
+        {currentScreen === "collection" && <CollectionScreen />}
+        {currentScreen === "report" && <ReportScreen />}
+        {currentScreen === "report-list" && <ReportListScreen />}
+        {currentScreen === "mypage" && <MyPageScreen />}
+        {currentScreen === "daily-log" && <DailyLogScreen />}
+        {currentScreen === "data-sync" && <DataSyncScreen />}
+        {currentScreen === "notification-settings" && (
+          <NotificationSettingsScreen />
+        )}
+        {currentScreen === "edit-health-info" && <EditHealthInfoScreen />}
+      </div>
+
+      <Toaster />
+    </main>
+  );
+}
