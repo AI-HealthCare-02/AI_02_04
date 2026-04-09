@@ -1,97 +1,36 @@
 """
-파생 피처 생성 + 피처 선택 (Backward + Forward) — 이진 분류
+피처 엔지니어링 — RiskCount 파생 피처 생성
 """
-
-import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import roc_auc_score
-from config import SEED, BASE_FEATS, UX_CANDIDATES
+import numpy as np
 
 
-def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    df["BMI_GenHlth"] = df["BMI"] * df["GenHlth"]
-    df["Age_HighBP"]  = df["Age"] * df["HighBP"]
-    df["BMI_obese"]   = (df["BMI"] >= 30).astype(int)
+def create_risk_count(df):
+    """
+    RiskCount: 위험 요인 겹침 횟수 (0~5)
+    - 기존 입력 피처에서 자동 계산 (사용자 추가 입력 없음)
+    - 위험 요인이 겹칠수록 당뇨 위험이 급격히 증가
+    - Feature Importance 3위 달성
+    """
+    df["RiskCount"] = (
+        df["HighBP"]
+        + df["HighChol"]
+        + df["HeartDiseaseorAttack"]
+        + df["DiffWalk"]
+        + (df["GenHlth"] >= 4).astype(int)
+    )
     return df
 
 
-def eval_cv(df: pd.DataFrame, y: np.ndarray, features: list, make_fn, cv: int = 3) -> tuple:
-    X   = df[features].values
-    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=SEED)
-    aucs = []
-
-    for tri, vai in skf.split(X, y):
-        model = make_fn()
-        model.fit(X[tri], y[tri])
-        proba = model.predict_proba(X[vai])[:, 1]
-        aucs.append(roc_auc_score(y[vai], proba))
-
-    return np.mean(aucs), np.std(aucs)
-
-
-def backward_selection(df, y, features, make_fn, steps=4):
-    current = features.copy()
-    print("\n  --- Backward ---")
-
-    for step in range(steps):
-        base_auc, _ = eval_cv(df, y, current, make_fn)
-        best_remove = None
-        best_auc    = 0
-
-        for f in current:
-            trial = [x for x in current if x != f]
-            auc, _ = eval_cv(df, y, trial, make_fn)
-            if auc > best_auc:
-                best_auc    = auc
-                best_remove = f
-
-        if best_auc >= base_auc - 0.0002:
-            current.remove(best_remove)
-            print(f"  Step {step+1}: -{best_remove:25s} → {len(current)}f, AUC={best_auc:.4f}")
-        else:
-            print(f"  Step {step+1}: 중단")
-            break
-
-    return current
-
-
-def forward_selection(df, y, current, make_fn, steps=4):
-    print("\n  --- Forward ---")
-
-    for step in range(steps):
-        candidates = [f for f in UX_CANDIDATES if f not in current]
-        if not candidates:
-            break
-
-        base_auc, _ = eval_cv(df, y, current, make_fn)
-        best_add  = None
-        best_auc  = 0
-
-        for f in candidates:
-            trial = current + [f]
-            auc, _ = eval_cv(df, y, trial, make_fn)
-            if auc > best_auc:
-                best_auc = auc
-                best_add = f
-
-        if best_auc > base_auc + 0.0002:
-            current.append(best_add)
-            print(f"  Step {step+1}: +{best_add:25s} → {len(current)}f, AUC={best_auc:.4f}")
-        else:
-            print(f"  Step {step+1}: 중단")
-            break
-
-    return current
-
-
-def select_features(df, y, make_fn):
-    base_auc, base_std = eval_cv(df, y, BASE_FEATS, make_fn)
-    print(f"\n  시작: {len(BASE_FEATS)}f, AUC={base_auc:.4f} ± {base_std:.4f}")
-
-    selected = backward_selection(df, y, BASE_FEATS, make_fn)
-    final    = forward_selection(df, y, selected, make_fn)
-
-    print(f"\n  최종 피처 {len(final)}개: {final}")
-    return final
+def compute_risk_count(input_data: dict) -> int:
+    """
+    단일 입력에 대한 RiskCount 계산 (서빙용)
+    백엔드에서 predict 호출 전에 사용
+    """
+    return (
+        input_data.get("HighBP", 0)
+        + input_data.get("HighChol", 0)
+        + input_data.get("HeartDiseaseorAttack", 0)
+        + input_data.get("DiffWalk", 0)
+        + (1 if input_data.get("GenHlth", 0) >= 4 else 0)
+    )

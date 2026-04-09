@@ -1,207 +1,234 @@
 """
-실행 진입점 — 이진 분류 (정상 vs 위험군)
-python train.py
+메인 학습 스크립트 — 전체 파이프라인 실행
 
-데이터: diabetes_binary_5050split_health_indicators_BRFSS2015.csv (50:50 균형)
-타겟: 0=정상, 1=위험군
+실행: python train.py
+소요: 약 40~60분
 """
-
-import os
-import joblib
 import numpy as np
 import pandas as pd
-import warnings
-warnings.filterwarnings("ignore")
-
+import joblib
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 
-from config import (
-    SEED, SAVE_DIR, MODEL_FILE, FEATURE_FILE, THRESHOLD_FILE,
-    BASE_FEATS, UX_CANDIDATES, THRESHOLD, LGB_DEFAULT_HP
-)
-from data_loader import load_data, get_labels
-from feature_engineering import add_derived_features, select_features
-from trainer import make_boost_model, search_hp, train_model, HAS_LGB
-from evaluator import evaluate, cross_validate
+from config import SEED, SAVE_DIR, MODEL_FEATS, USER_FEATS, TEST_SIZE
+from data_loader import load_data, get_target, print_data_info
+from feature_engineering import create_risk_count
+from trainer import (print_library_status, train_lightgbm, train_xgboost,
+                     train_catboost, train_sklearn_models)
+from evaluator import (compare_models, run_stacking, run_weighted_blend,
+                       run_multi_seed, optimize_threshold, print_report, run_cv)
+from predictor import verify_model
 
 np.random.seed(SEED)
 
+# ============================================================
+# 1. 데이터 준비
+# ============================================================
+print("\n" + "=" * 60)
+print("  당뇨 예측 — 궁극의 최종 모델")
+print("  (기능 구현서 완벽 호환, 모든 기법 총동원)")
+print("=" * 60)
 
-def _make_base_model():
-    """피처 선택용 기본 모델 생성"""
-    if HAS_LGB:
-        import lightgbm as lgb  # type: ignore
-        return lgb.LGBMClassifier(
-            n_estimators=500,
-            max_depth=5,
-            learning_rate=0.03,
-            num_leaves=20,
-            min_child_samples=50,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            reg_alpha=0.1,
-            reg_lambda=1.0,
-            class_weight="balanced",
-            random_state=SEED,
-            n_jobs=-1,
-            verbose=-1,
-        )
+print_library_status()
+df = load_data()
+df = create_risk_count(df)
+y = get_target(df)
+print_data_info(df)
+print(f"  사용자 입력: {len(USER_FEATS)}개, 모델 피처: {len(MODEL_FEATS)}개")
+
+X_all = df[MODEL_FEATS].values
+X_train, X_valid, y_train, y_valid = train_test_split(
+    X_all, y, test_size=TEST_SIZE, random_state=SEED, stratify=y)
+print(f"  Train: {len(y_train)}, Valid: {len(y_valid)}")
+
+# ============================================================
+# 2. 부스팅 3종 + Optuna
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 1: 부스팅 3종 + Optuna")
+print("=" * 60)
+
+models = {}
+probs = {}
+
+# LightGBM
+m, bp = train_lightgbm(X_all, y, X_train, y_train)
+if m:
+    probs['LGB'] = m.predict_proba(X_valid)[:, 1]
+    models['LGB'] = (m, bp)
+    print(f"  LightGBM AUC: {roc_auc_score(y_valid, probs['LGB']):.4f}")
+
+# XGBoost
+m, bp = train_xgboost(X_all, y, X_train, y_train)
+if m:
+    probs['XGB'] = m.predict_proba(X_valid)[:, 1]
+    models['XGB'] = (m, bp)
+    print(f"  XGBoost AUC: {roc_auc_score(y_valid, probs['XGB']):.4f}")
+
+# CatBoost
+m, bp = train_catboost(X_all, y, X_train, y_train)
+if m:
+    probs['CAT'] = m.predict_proba(X_valid)[:, 1]
+    models['CAT'] = (m, bp)
+    print(f"  CatBoost AUC: {roc_auc_score(y_valid, probs['CAT']):.4f}")
+
+# ============================================================
+# 3. 앙상블 기반 모델 4종
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 2: 앙상블 기반 4종")
+print("=" * 60)
+
+sklearn_models, scaler = train_sklearn_models(X_train, y_train)
+for name, (m, p) in sklearn_models.items():
+    if name == 'LR':
+        from sklearn.preprocessing import StandardScaler
+        probs[name] = m.predict_proba(scaler.transform(X_valid))[:, 1]
     else:
-        from sklearn.ensemble import GradientBoostingClassifier
-        return GradientBoostingClassifier(
-            n_estimators=300, max_depth=5,
-            learning_rate=0.05, subsample=0.8,
-            random_state=SEED,
-        )
+        probs[name] = m.predict_proba(X_valid)[:, 1]
+    models[name] = (m, p)
+    print(f"  {name} AUC: {roc_auc_score(y_valid, probs[name]):.4f}")
 
+# ============================================================
+# 4. 개별 모델 비교
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 3: 개별 모델 비교")
+print("=" * 60)
+sorted_models = compare_models(probs, y_valid)
 
-def main():
-    print("\n" + "=" * 60)
-    print("  당뇨 위험도 예측 — 이진 분류 (정상 vs 위험군)")
-    print("=" * 60)
+# ============================================================
+# 5. Stacking
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 4: 7-모델 Stacking (OOF 5-Fold)")
+print("=" * 60)
+stack_prob, stack_auc, stack_name = run_stacking(models, X_all, y, X_valid, y_valid)
+print(f"\n  최고: {stack_name} → {stack_auc:.4f}")
 
+# ============================================================
+# 6. Weighted Blend
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 5: Weighted Blend")
+print("=" * 60)
+blend_auc, blend_weights = run_weighted_blend(probs, y_valid)
+if blend_weights:
+    print(f"  Boost Blend: {blend_weights}\n  AUC: {blend_auc:.4f}")
 
-    print(f"\n{'='*60}")
-    print("  STEP 1: 데이터 로드")
-    print("=" * 60)
+# ============================================================
+# 7. Multi-Seed
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 6: Multi-Seed x10")
+print("=" * 60)
+best_single_name = sorted_models[0][0]
+best_single_model, best_single_params = models[best_single_name]
+multi_prob, multi_auc = run_multi_seed(
+    best_single_model, best_single_params, best_single_name,
+    X_train, y_train, X_valid, y_valid)
+print(f"  {best_single_name} x10 seeds: {multi_auc:.4f}")
 
-    df = load_data()
-    df = add_derived_features(df)
-    y  = get_labels(df)
+# ============================================================
+# 8. 최종 비교
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 7: 최종 비교")
+print("=" * 60)
 
-    print(f"\n{'='*60}")
-    print("  STEP 2: Train/Valid Split")
-    print("=" * 60)
+candidates = {}
+for n, p in sorted_models:
+    candidates[f"{n} (단독)"] = p
+candidates[f"Stacking ({stack_name})"] = stack_prob
+candidates[f"{best_single_name} x10seeds"] = multi_prob
+if blend_weights:
+    candidates["Boost Blend"] = sum(w * probs[n] for n, w in blend_weights.items())
 
-    all_candidates = list(dict.fromkeys(BASE_FEATS + UX_CANDIDATES))
-    all_candidates = [f for f in all_candidates if f in df.columns]
+print(f"\n  {'방법':30s} {'AUC':>8s}")
+print("  " + "-" * 40)
+best_name = None
+best_auc = 0
+best_prob_final = None
+for n, p in sorted(candidates.items(), key=lambda x: -roc_auc_score(y_valid, x[1])):
+    a = roc_auc_score(y_valid, p)
+    star = " ★" if a > best_auc else ""
+    if a > best_auc:
+        best_auc = a
+        best_name = n
+        best_prob_final = p
+    print(f"  {n:30s} {a:8.4f}{star}")
+print(f"\n  최고: {best_name} → AUC={best_auc:.4f}")
 
-    X_all = df[all_candidates].values
-    X_train, X_valid, y_train, y_valid = train_test_split(
-        X_all, y, test_size=0.2, random_state=SEED, stratify=y
-    )
+# ============================================================
+# 9. Threshold 최적화
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  PHASE 8: Threshold 최적화")
+print("=" * 60)
+best_th = optimize_threshold(best_prob_final, y_valid)
+print(f"\n  최적 Threshold: {best_th:.2f}")
+print(f"\n  AUC: {best_auc:.4f}\n")
+print_report(best_prob_final, y_valid, best_th)
 
-    df_train = pd.DataFrame(X_train, columns=all_candidates)
+# 5-Fold CV
+print(f"  [5-Fold CV — {best_single_name}]")
+cv_mean, cv_std = run_cv(best_single_model, best_single_params, best_single_name, X_all, y)
+print(f"  5-Fold CV: {cv_mean:.4f} ± {cv_std:.4f}")
 
-    print(f"  Train: {X_train.shape}")
-    print(f"  Valid: {X_valid.shape}")
-    print(f"  Train 위험군 비율: {y_train.mean():.1%}")
-    print(f"  Valid 위험군 비율: {y_valid.mean():.1%}")
+# ============================================================
+# 10. 모델 저장
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  모델 저장")
+print("=" * 60)
+os.makedirs(SAVE_DIR, exist_ok=True)
+joblib.dump(best_single_model, os.path.join(SAVE_DIR, 'diabetes_model_v3.pkl'))
+joblib.dump(MODEL_FEATS, os.path.join(SAVE_DIR, 'feature_names_v3.pkl'))
+joblib.dump(best_th, os.path.join(SAVE_DIR, 'threshold_v3.pkl'))
+print(f"  diabetes_model_v3.pkl   ← {best_single_name}")
+print(f"  feature_names_v3.pkl    ← {len(MODEL_FEATS)}개 (사용자 {len(USER_FEATS)}개 + RiskCount)")
+print(f"  threshold_v3.pkl        ← {best_th:.2f}")
 
+if hasattr(best_single_model, 'feature_importances_'):
+    print(f"\n  [Feature Importance — {best_single_name}]")
+    imp = pd.DataFrame({'f': MODEL_FEATS, 'i': best_single_model.feature_importances_})
+    imp = imp.sort_values('i', ascending=False)
+    for _, r in imp.iterrows():
+        print(f"    {r['f']:25s}: {r['i']:.0f}")
 
-    print(f"\n{'='*60}")
-    print("  STEP 3: 피처 선택 (Backward + Forward)")
-    print("=" * 60)
+# ============================================================
+# 11. 검증
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  검증")
+print("=" * 60)
+verify_model()
 
-    final_feats = select_features(df_train, y_train, _make_base_model)
+# ============================================================
+# 12. 최종 요약
+# ============================================================
+print(f"\n{'=' * 60}")
+print("  최종 요약")
+print("=" * 60)
+print(f"""
+  [기능 구현서 완벽 호환]
+  사용자 입력: {len(USER_FEATS)}개 (변경 없음)
+  모델 피처: {len(MODEL_FEATS)}개 (+RiskCount 파생)
 
-
-    print(f"\n{'='*60}")
-    print("  STEP 4: HP 탐색")
-    print("=" * 60)
-
-    best_hp = search_hp(df_train, y_train, final_feats)
-
-    print(f"\n{'='*60}")
-    print("  STEP 5: 모델 학습")
-    print("=" * 60)
-
-    feat_idx = [all_candidates.index(f) for f in final_feats]
-    X_tr = X_train[:, feat_idx]
-    X_va = X_valid[:, feat_idx]
-
-    model, valid_auc = train_model(X_tr, y_train, X_va, y_valid, best_hp)
-
-
-    print(f"\n{'='*60}")
-    print("  STEP 6: 평가")
-    print("=" * 60)
-
-    proba   = model.predict_proba(X_va)[:, 1]
-    metrics = evaluate(y_valid, proba, THRESHOLD)
-
-    def make_final():
-        return make_boost_model(best_hp.copy())
-
-    cv_auc, cv_std = cross_validate(df_train, y_train, final_feats, make_final)
-
-  
-    print(f"\n{'='*60}")
-    print("  STEP 7: 모델 저장")
-    print("=" * 60)
-
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    joblib.dump(model,       os.path.join(SAVE_DIR, MODEL_FILE))
-    joblib.dump(final_feats, os.path.join(SAVE_DIR, FEATURE_FILE))
-    joblib.dump(THRESHOLD,   os.path.join(SAVE_DIR, THRESHOLD_FILE))
-
-    print(f"  {MODEL_FILE}      ← 이진 분류 LightGBM")
-    print(f"  {FEATURE_FILE} ← {len(final_feats)}개 피처")
-    print(f"  {THRESHOLD_FILE}   ← threshold={THRESHOLD}")
-
-    # Feature Importance
-    print(f"\n  [Feature Importance]")
-    imp_df = pd.DataFrame({
-        "feature":    final_feats,
-        "importance": model.feature_importances_,
-    }).sort_values("importance", ascending=False)
-
-    max_imp = imp_df["importance"].max()
-    for _, row in imp_df.iterrows():
-        bar = "█" * int(row["importance"] / max_imp * 20)
-        print(f"    {row['feature']:25s} {bar}")
-
-
-    print(f"\n{'='*60}")
-    print("  STEP 8: 샘플 예측 검증")
-    print("=" * 60)
-
-    from predictor import RiskPredictor
-    predictor = RiskPredictor()
-
-    test_cases = [
-        ("건강한 30대 남성", {
-            "HighBP": 0, "HighChol": 0, "BMI": 22,
-            "HeartDiseaseorAttack": 0, "HvyAlcoholConsump": 0,
-            "GenHlth": 1, "DiffWalk": 0, "Sex": 1, "Age": 5,
-        }),
-        ("고위험 60대 여성", {
-            "HighBP": 1, "HighChol": 1, "BMI": 35,
-            "HeartDiseaseorAttack": 1, "HvyAlcoholConsump": 0,
-            "GenHlth": 4, "DiffWalk": 1, "Sex": 0, "Age": 10,
-        }),
-        ("경계선 50대 남성", {
-            "HighBP": 1, "HighChol": 0, "BMI": 28,
-            "HeartDiseaseorAttack": 0, "HvyAlcoholConsump": 0,
-            "GenHlth": 3, "DiffWalk": 0, "Sex": 1, "Age": 8,
-        }),
-    ]
-
-    for label, inp in test_cases:
-        result = predictor.predict(inp)
-        print(f"\n  [{label}]")
-        print(f"    결과:      {result['class_label']}", end="")
-        if result["risk_level"]:
-            print(f" ({result['risk_level'].upper()})", end="")
-        print()
-        print(f"    위험 점수: {result['risk_score']:.4f}")
-        print(f"    위험 요인: {result['top_risk_factors']}")
-        print(f"    추천:      {result['recommendation']}")
-
-    print(f"\n{'='*60}")
-    print("  최종 결과")
-    print("=" * 60)
-    print(f"""
-  피처:          {len(final_feats)}개
-  AUC:           {metrics['auc']:.4f}
-  F1 (위험군):   {metrics['f1']:.4f}
-  Recall:        {metrics['recall']:.4f}
-  5-Fold CV AUC: {cv_auc:.4f} ± {cv_std:.4f}
-  Threshold:     {THRESHOLD}
-    """)
-    print("[DONE]")
-
-
-if __name__ == "__main__":
-    main()
+  [개별 모델]""")
+for n, p in sorted_models:
+    print(f"    {n:15s}: {roc_auc_score(y_valid, p):.4f}")
+print(f"""
+  [앙상블]
+    Stacking ({stack_name}): {stack_auc:.4f}
+    Multi-Seed x10:    {multi_auc:.4f}""")
+if blend_weights:
+    print(f"    Boost Blend:       {blend_auc:.4f}")
+print(f"""
+  최고: {best_name} → AUC={best_auc:.4f}
+  저장: {best_single_name} (단독 모델)
+  5-Fold CV: {cv_mean:.4f} ± {cv_std:.4f}
+  Threshold: {best_th:.2f}
+""")
+print("[DONE]")
