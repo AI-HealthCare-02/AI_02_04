@@ -9,13 +9,15 @@
 - **학습 환경**: RTX 5080 Laptop GPU, 198분
 
 ## 파일 구조
+
+```text
 food_model/
-├── food_model.pth    # 학습된 모델 가중치
-├── class_map.json    # 클래스 인덱스 ↔ 음식명 매핑
-├── config.py         # 학습 하이퍼파라미터
-├── dataset.py        # 데이터셋 클래스
-├── train.py          # 학습 코드
-├── inference.py      # 추론 코드 (백엔드 연동용)
+├── food_model.pth   # 학습된 모델 가중치
+├── class_map.json   # 클래스 인덱스 ↔ 음식명 매핑
+├── config.py        # 학습 하이퍼파라미터
+├── dataset.py       # 데이터셋 클래스
+├── train.py         # 학습 코드
+├── inference.py     # 추론 코드(백엔드 연동용)
 └── README.md
 
 ## 백엔드 연동 
