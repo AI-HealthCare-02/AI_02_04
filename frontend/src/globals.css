@@ -1,0 +1,344 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   DESIGN SYSTEM — Lime App Color System
+
+   ── Lime App Color Chart ─────────────────────────────────
+   Primary      #87D57B   oklch(0.78 0.17 138)  라임 그린 (주 컬러)
+   Background   #F9FFEF   oklch(0.99 0.022 115) 연 라임 화이트 (주 배경)
+   Sub-1        #A4E69A   oklch(0.86 0.14 138)  소프트 그린
+   Sub-2        #B6EB73   oklch(0.88 0.17 128)  라임 옐로우-그린
+   Sub-3        #CBF891   oklch(0.93 0.14 130)  밝은 라임
+   Sub-4        #E9FBA4   oklch(0.96 0.10 118)  연 라임 옐로우
+   Sub-5        #F4F683   oklch(0.96 0.12 108)  소프트 옐로우
+   Accent-Blue  #AEE1F9   oklch(0.89 0.08 218)  파스텔 블루
+   Accent-Yell  #FFF383   oklch(0.97 0.10 105)  파스텔 옐로우
+   Accent-Mint  #A1E8CE   oklch(0.88 0.09 165)  파스텔 민트
+   Card         #FFFFFF   oklch(1 0 0)           순수 흰색
+   Text-Prim    #2A2A2A   oklch(0.22 0.008 138) 네어 블랙
+   Text-Sec     #6A6A6A   oklch(0.50 0.005 138) 미드 그레이
+   Border       #E4EDD6   oklch(0.93 0.030 122) 위스퍼 보더
+============================================================ */
+
+:root {
+  /* ── Primary: #87D57B 라임 그린 ── */
+  --primary: oklch(0.78 0.17 138);
+  --primary-foreground: oklch(1 0 0);
+
+  /* ── Background: #F9FFEF 연 라임 화이트 ── */
+  --background: oklch(0.99 0.022 115);
+  --foreground: oklch(0.22 0.008 138);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.008 138);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.008 138);
+
+  /* ── Secondary surfaces ── */
+  --secondary: oklch(0.96 0.018 122);
+  --secondary-foreground: oklch(0.38 0.012 138);
+  --muted: oklch(0.97 0.012 118);
+  --muted-foreground: oklch(0.52 0.008 138);
+
+  /* ── Accent: Sub-3 (#CBF891) 계열 틴트 ── */
+  --accent: oklch(0.94 0.1 128);
+  --accent-foreground: oklch(0.35 0.14 138);
+
+  /* ── Semantic ── */
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* ── Borders & Inputs ── */
+  --border: oklch(0.93 0.03 122); /* #E4EDD6 계열 위스퍼 보더 */
+  --input: oklch(0.97 0.018 118);
+  --ring: oklch(0.78 0.17 138); /* primary 동일 */
+
+  /* ── Badge tint (Sub-3 #CBF891 계열 pill) ── */
+  --badge-bg: oklch(0.94 0.1 128);
+  --badge-fg: oklch(0.38 0.16 138);
+
+  /* ── Notion multi-layer shadow system ── */
+  --shadow-whisper: 0px 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card:
+    rgba(0, 0, 0, 0.04) 0px 4px 18px, rgba(0, 0, 0, 0.027) 0px 2.025px 7.85px,
+    rgba(0, 0, 0, 0.02) 0px 0.8px 2.93px, rgba(0, 0, 0, 0.01) 0px 0.175px 1.04px;
+  --shadow-deep:
+    rgba(0, 0, 0, 0.01) 0px 1px 3px, rgba(0, 0, 0, 0.02) 0px 3px 7px,
+    rgba(0, 0, 0, 0.02) 0px 7px 15px, rgba(0, 0, 0, 0.04) 0px 14px 28px,
+    rgba(0, 0, 0, 0.05) 0px 23px 52px;
+
+  /* ── Radius scale (Notion-aligned) ── */
+  --radius: 0.75rem; /* 12px: 표준 카드 */
+  --radius-xs: 0.25rem; /*  4px: 버튼, 인풋 */
+  --radius-sm: 0.375rem; /*  6px: 소형 인터랙티브 */
+  --radius-md: 0.5rem; /*  8px: 소형 카드 */
+  --radius-lg: 0.75rem; /* 12px: 표준 카드 */
+  --radius-xl: 1rem; /* 16px: 피처/히어로 카드 */
+
+  /* ── Charts ── */
+  --chart-1: oklch(0.72 0.11 140.24);
+  --chart-2: oklch(0.7 0.12 85);
+  --chart-3: oklch(0.66 0.1 320);
+  --chart-4: oklch(0.76 0.09 50);
+  --chart-5: oklch(0.58 0.12 260);
+
+  /* ── Sidebar ── */
+  --sidebar: oklch(0.99 0.022 115);
+  --sidebar-foreground: oklch(0.22 0.008 138);
+  --sidebar-primary: oklch(0.78 0.17 138);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0.1 128);
+  --sidebar-accent-foreground: oklch(0.35 0.14 138);
+  --sidebar-border: oklch(0.93 0.03 122);
+  --sidebar-ring: oklch(0.78 0.17 138);
+
+  /* ── App semantic colors ── */
+  --success: oklch(0.78 0.17 138);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.7 0.13 80);
+  --warning-foreground: oklch(0.28 0.06 80);
+  --character-happy: oklch(0.78 0.12 85);
+  --character-sad: oklch(0.58 0.08 260);
+  --character-sick: oklch(0.66 0.1 320);
+}
+
+/* ── Dark mode ── */
+.dark {
+  --background: oklch(0.18 0.02 138);
+  --foreground: oklch(0.95 0.008 130);
+  --card: oklch(0.22 0.02 138);
+  --card-foreground: oklch(0.95 0.008 130);
+  --popover: oklch(0.22 0.02 138);
+  --popover-foreground: oklch(0.95 0.008 130);
+
+  --primary: oklch(0.82 0.15 138); /* 다크모드: 밝은 라임 */
+  --primary-foreground: oklch(0.16 0.08 138);
+
+  --secondary: oklch(0.28 0.018 138);
+  --secondary-foreground: oklch(0.9 0.008 130);
+  --muted: oklch(0.26 0.015 138);
+  --muted-foreground: oklch(0.64 0.008 138);
+  --accent: oklch(0.3 0.1 128);
+  --accent-foreground: oklch(0.88 0.12 130);
+
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.95 0 0);
+
+  --border: oklch(0.3 0.02 138);
+  --input: oklch(0.27 0.015 138);
+  --ring: oklch(0.82 0.15 138);
+
+  --badge-bg: oklch(0.28 0.1 128);
+  --badge-fg: oklch(0.88 0.14 130);
+
+  --shadow-whisper: 0px 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-card:
+    rgba(0, 0, 0, 0.2) 0px 4px 18px, rgba(0, 0, 0, 0.14) 0px 2.025px 7.85px,
+    rgba(0, 0, 0, 0.09) 0px 0.8px 2.93px, rgba(0, 0, 0, 0.05) 0px 0.175px 1.04px;
+  --shadow-deep:
+    rgba(0, 0, 0, 0.1) 0px 1px 3px, rgba(0, 0, 0, 0.14) 0px 3px 7px,
+    rgba(0, 0, 0, 0.16) 0px 7px 15px, rgba(0, 0, 0, 0.2) 0px 14px 28px,
+    rgba(0, 0, 0, 0.25) 0px 23px 52px;
+
+  --chart-1: oklch(0.82 0.15 138);
+  --chart-2: oklch(0.87 0.12 108);
+  --chart-3: oklch(0.63 0.1 320);
+  --chart-4: oklch(0.88 0.08 218);
+  --chart-5: oklch(0.88 0.09 165);
+
+  --sidebar: oklch(0.2 0.02 138);
+  --sidebar-foreground: oklch(0.95 0.008 130);
+  --sidebar-primary: oklch(0.82 0.15 138);
+  --sidebar-primary-foreground: oklch(0.16 0.08 138);
+  --sidebar-accent: oklch(0.3 0.1 128);
+  --sidebar-accent-foreground: oklch(0.88 0.12 130);
+  --sidebar-border: oklch(0.3 0.02 138);
+  --sidebar-ring: oklch(0.82 0.15 138);
+
+  --success: oklch(0.6 0.14 145);
+  --success-foreground: oklch(0.15 0.02 145);
+  --warning: oklch(0.68 0.12 80);
+  --warning-foreground: oklch(0.2 0.05 80);
+  --character-happy: oklch(0.7 0.12 85);
+  --character-sad: oklch(0.5 0.08 260);
+  --character-sick: oklch(0.6 0.1 320);
+}
+
+/* ── Tailwind v4 theme mapping ── */
+@theme inline {
+  --font-sans: "Nunito", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "Courier New", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Badge tint colors */
+  --color-badge-bg: var(--badge-bg);
+  --color-badge-fg: var(--badge-fg);
+
+  /* Radius scale override */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+}
+
+/* ── Base resets ── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "lnum", "locl";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Notion shadow utilities ── */
+@layer utilities {
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-deep {
+    box-shadow: var(--shadow-deep);
+  }
+  .shadow-whisper {
+    box-shadow: var(--shadow-whisper);
+  }
+
+  /* Notion letter-spacing compression scale */
+  .tracking-display {
+    letter-spacing: -2.125px;
+  } /* 64px display */
+  .tracking-heading {
+    letter-spacing: -1.5px;
+  } /* 48px section */
+  .tracking-subhead {
+    letter-spacing: -0.625px;
+  } /* 26px sub */
+  .tracking-card-title {
+    letter-spacing: -0.25px;
+  } /* 22px card */
+  .tracking-body-em {
+    letter-spacing: -0.125px;
+  } /* 20px body large */
+  .tracking-badge {
+    letter-spacing: 0.125px;
+  } /* 12px badge */
+
+  /* Notion badge pill tint */
+  .badge-tint {
+    background-color: var(--badge-bg);
+    color: var(--badge-fg);
+  }
+}
+
+/* ── Character animations ── */
+@keyframes bounce-gentle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+  75% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+.animate-sparkle {
+  animation: sparkle 1s ease-in-out infinite;
+}
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
