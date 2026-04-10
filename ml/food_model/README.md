@@ -39,7 +39,8 @@ python train.py
 ```
 
 ## 학습 기법
-- 2단계 학습 (에폭 1~5: 분류층만 → 에폭 6~: 전체 Fine-tuning)
+
+- 2단계 학습 (에폭 15: 분류층만 학습 → 에폭 6: 전체 Fine-tuning)
 - Mixed Precision (AMP) — 속도 30~50% 향상
 - Label Smoothing 0.1 — 과신뢰 방지
 - WeightedRandomSampler — 클래스 불균형 해결
