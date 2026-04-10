@@ -5,24 +5,49 @@ from datetime import date
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.models.user import User
+from app.services.ai.recommendation_engine import RecommendationEngine
 router = APIRouter()
 
 @router.post("")
-def get_recommendations(
+async def get_recommendations(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Mock
+    user_id = current_user["user_id"]
+    user_type = current_user.get("payload",{}).get("user_type")
+    goal = current_user.get("payload",{}).get("goal")
+    risk_level = current_user.get("payload",{}).get("risk_level")
+    diabetes_type = current_user.get("payload",{}).get("diabetes_type")
+
+    user = db.query(User).filter(
+        User.id == user_id
+    ).first()
+    engine = RecommendationEngine()
+
+    if user_type == "diabetes":
+        conditions = ["diabetes"]
+    elif user_type == "risk":
+        conditions = ["prediabetes"]
+    else:
+        conditions = []
+
+    if user_type == "diabetes":
+        goals = ["혈당 관리"]
+    elif user_type == "risk":
+        goals = ["당뇨관리"]
+    else:
+        goals = [goal] if goal else ["건강 관리"]
+
+    result = await engine.generate_recommendations({
+        "age":           user.age, #type:ignore
+        "gender":        "M" if user.gender == 1 else "F", #type:ignore
+        "user_type":     user_type,
+        "conditions":    conditions,
+        "goals":         goals,  
+    })
+ 
     return {
         "success": True,
-        "data": {
-            "recommendations": [
-                {
-                    "action": "식후 15분 걷기를 해보세요",
-                    "reason": "식후 혈당 스파이크 억제에 효과적입니다",
-                    "difficulty": "easy"
-                }
-            ],
-            "disclaimer": "본 추천은 생활습관 개선을 위한 참고용입니다."
-        }
+        "data":result
     }
