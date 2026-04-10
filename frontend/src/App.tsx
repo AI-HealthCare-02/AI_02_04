@@ -25,8 +25,18 @@ export default function App() {
   const { currentScreen, resetApp } = useAppStore();
   const [isMounted, setIsMounted] = useState(false);
 
+  // 브라우저 자동 스크롤 복원 비활성화 (최초 1회)
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+  }, []);
+
+  // 화면 전환 시 스크롤 최상단으로 즉시 이동
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [currentScreen]);
 
   useEffect(() => {

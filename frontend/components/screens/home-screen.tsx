@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import "@/src/home.css";
 import { useAppStore } from "@/lib/store";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BottomNav } from "@/components/ui/navigation-menu";
@@ -77,7 +78,16 @@ function StatChip({
   iconBg: string;
 }) {
   return (
-    <div className="flex-1 bg-white/70 rounded-2xl px-3 py-3 border border-white flex flex-col items-center gap-1.5 shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
+    <div
+      className="flex-1 rounded-2xl px-3 py-3 flex flex-col items-center gap-1.5"
+      style={{
+        background: "rgba(255,255,255,0.72)",
+        border: "1px solid rgba(255,255,255,0.9)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+      }}
+    >
       {/* 아이콘 원형 배경 */}
       <div
         className="size-8 rounded-full flex items-center justify-center"
@@ -247,7 +257,85 @@ export function HomeScreen() {
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
-      <div className="relative flex flex-col items-center px-5 pt-14 pb-7">
+      <div className="retro-scene relative flex flex-col items-center px-5 pt-14 pb-7">
+        {/* ── 떠다니는 도형들 ── */}
+        {/* 좌상단 영역 */}
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-sm ra-1"
+          style={{ top: "10%", left: "8%", animationDelay: "0s" }}
+        />
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-xs ra-2"
+          style={{ top: "18%", left: "22%", animationDelay: "0.8s" }}
+        />
+        <span
+          className="retro-shape rs-square   rc-green  rz-sm ra-2"
+          style={{ top: "14%", left: "6%", animationDelay: "0.4s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-white  rz-xs ra-6"
+          style={{ top: "8%", left: "38%", animationDelay: "1.2s" }}
+        />
+
+        {/* 우상단 영역 */}
+        <span
+          className="retro-shape rs-diamond  rc-green  rz-sm ra-1"
+          style={{ top: "12%", right: "10%", animationDelay: "0.6s" }}
+        />
+        <span
+          className="retro-shape rs-square   rc-green  rz-md ra-5"
+          style={{ top: "22%", right: "6%", animationDelay: "1.5s" }}
+        />
+        <span
+          className="retro-shape rs-ring     rc-white  rz-sm ra-3"
+          style={{ top: "8%", right: "28%", animationDelay: "0.3s" }}
+        />
+
+        {/* 좌중앙 영역 */}
+        <span
+          className="retro-shape rs-circle   rc-red    rz-md ra-3"
+          style={{ top: "42%", left: "4%", animationDelay: "2.1s" }}
+        />
+        <span
+          className="retro-shape rs-diamond  rc-yellow rz-xs ra-4"
+          style={{ top: "36%", left: "16%", animationDelay: "1.0s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-green  rz-xs ra-6"
+          style={{ top: "52%", left: "10%", animationDelay: "0.2s" }}
+        />
+
+        {/* 우중앙 영역 */}
+        <span
+          className="retro-shape rs-circle   rc-red    rz-lg ra-5"
+          style={{ top: "48%", right: "3%", animationDelay: "1.8s" }}
+        />
+        <span
+          className="retro-shape rs-ring     rc-yellow rz-sm ra-2"
+          style={{ top: "38%", right: "18%", animationDelay: "0.7s" }}
+        />
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-xs ra-1"
+          style={{ top: "30%", right: "30%", animationDelay: "2.4s" }}
+        />
+
+        {/* 하단 영역 */}
+        <span
+          className="retro-shape rs-square   rc-green  rz-lg ra-2"
+          style={{ bottom: "24%", left: "3%", animationDelay: "1.3s" }}
+        />
+        <span
+          className="retro-shape rs-circle   rc-red    rz-xl ra-5"
+          style={{ bottom: "18%", left: "18%", animationDelay: "0.9s" }}
+        />
+        <span
+          className="retro-shape rs-circle   rc-red    rz-lg ra-3"
+          style={{ bottom: "16%", right: "8%", animationDelay: "2.0s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-yellow rz-xs ra-6"
+          style={{ bottom: "30%", right: "22%", animationDelay: "0.5s" }}
+        />
         {/* 최상단: 스트릭 + 포인트 */}
         <div className="w-full flex items-center justify-between mb-5">
           <div>

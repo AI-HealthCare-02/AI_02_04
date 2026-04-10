@@ -696,7 +696,7 @@ export function DietScreen() {
               </Button>
             </div>
             <button
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-[#3E8C28] bg-[#E8F9D6] hover:bg-[#CBF891] px-4 py-2.5 rounded-2xl transition-colors"
+              className="flex justify-center items-center w-full gap-1.5 text-[13px] font-semibold text-[#3E8C28] bg-[#E8F9D6] hover:bg-[#CBF891] px-4 py-2.5 rounded-2xl transition-colors"
               onClick={() => setShowManualModal(true)}
             >
               <PencilLine className="size-4" />
