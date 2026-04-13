@@ -1,6 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { fetchWeeklyReport } from "@/lib/api";
+import type { WeeklyReportResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollHeader } from "@/components/ui/scroll-header";
@@ -17,7 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const weeklyScore = 85;
+const FALLBACK_SCORE = 85;
 
 const wordCloudData = [
   { text: "샐러드",   size: "text-[22px]", healthy: true  },
@@ -48,6 +50,20 @@ export function ReportScreen() {
   const isScrolled = useScrollHeader();
   const [missionAdjusted, setMissionAdjusted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [reportData, setReportData] = useState<WeeklyReportResponse | null>(null);
+
+  useEffect(() => {
+    fetchWeeklyReport()
+      .then(setReportData)
+      .catch(() => { /* API 실패 시 하드코딩 폴백 */ });
+  }, []);
+
+  const weeklyScore = reportData?.health_score ?? FALLBACK_SCORE;
+  const aiBriefing = reportData?.ai_briefing ?? {
+    good: "수요일과 목요일에 식이섬유가 풍부한 식단을 완벽히 지켜주셨어요! 혈당 관리에 아주 좋은 습관입니다.",
+    bad: "주말에 정제 탄수화물(빵, 면) 섭취 빈도가 평일 대비 40% 증가했습니다. 다음 주말엔 통곡물 빵으로 대체해 보는 건 어떨까요?",
+    next_week: "다음 주에는 식후 15분 걷기 미션을 매일 달성하여 식후 혈당 스파이크를 잡아볼까요?",
+  };
 
   const handleAdjustMission = () => {
     setMissionAdjusted(true);
@@ -83,6 +99,56 @@ export function ReportScreen() {
       </p>
     </div>
   );
+
+  /* ── mini: 캐릭터 독려 메시지만 표시 ── */
+  if (reportData?.report_type === "mini") {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center px-8 gap-5">
+        <div className="size-16 rounded-full bg-[#CBF891] flex items-center justify-center">
+          <ThumbsUp className="size-8 text-[#3E8C28]" strokeWidth={2} />
+        </div>
+        <div className="text-center">
+          <p className="text-[18px] font-bold text-[#3C3C3C] mb-2">기록을 더 채워볼까요?</p>
+          <p className="text-[14px] text-[#7A7A7A] leading-relaxed">
+            {reportData.character_message ?? "기록이 2일 이하예요. 더 많은 기록을 남기면 맞춤 리포트를 드릴게요!"}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => setScreen("report-list")} className="rounded-2xl px-8">
+          돌아가기
+        </Button>
+      </div>
+    );
+  }
+
+  /* ── partial: 간소화 리포트 ── */
+  if (reportData?.report_type === "partial") {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] pb-12">
+        <div className="bg-white border-b border-black/[0.06]">
+          <div className="flex items-center gap-1 px-4 pt-12 pb-4">
+            <Button variant="ghost" size="icon" onClick={() => setScreen("report-list")} className="shrink-0 text-[#3C3C3C]">
+              <ArrowLeft className="size-5" />
+            </Button>
+            <div className="ms-1">
+              <h1 className="text-[18px] font-bold text-[#3C3C3C]">주간 건강 리포트</h1>
+              <p className="text-[13px] text-[#7A7A7A] font-medium">3월 3주차 분석 결과</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-5 pt-6 space-y-4">
+          <div className="bg-[#FFF9E6] rounded-2xl border border-[#FFF383] p-5 flex items-start gap-3">
+            <AlertCircle className="size-5 text-[#8C7010] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[14px] font-bold text-[#5C4A00] mb-1">기록을 더 채워보세요</p>
+              <p className="text-[13px] text-[#8C7010] leading-relaxed">
+                {reportData.character_message ?? "3~4일 기록됐어요. 5일 이상 기록하면 정밀 리포트를 받을 수 있어요!"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-12">
@@ -354,7 +420,7 @@ export function ReportScreen() {
               <div className="flex-1">
                 <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">정말 잘하셨어요!</p>
                 <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
-                  수요일과 목요일에 식이섬유가 풍부한 식단을 완벽히 지켜주셨어요! 혈당 관리에 아주 좋은 습관입니다.
+                  {aiBriefing.good}
                 </p>
               </div>
             </div>
@@ -367,7 +433,7 @@ export function ReportScreen() {
               <div className="flex-1">
                 <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">조금 아쉬워요</p>
                 <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
-                  주말에 정제 탄수화물(빵, 면) 섭취 빈도가 평일 대비 40% 증가했습니다. 다음 주말엔 통곡물 빵으로 대체해 보는 건 어떨까요?
+                  {aiBriefing.bad}
                 </p>
               </div>
             </div>
@@ -380,7 +446,7 @@ export function ReportScreen() {
               <div className="flex-1">
                 <p className="text-[14px] font-bold text-[#2A2A2A] mb-1">다음 주 전략 제안</p>
                 <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
-                  다음 주에는 식후 15분 걷기 미션을 매일 달성하여 식후 혈당 스파이크를 잡아볼까요?
+                  {aiBriefing.next_week}
                 </p>
               </div>
             </div>
