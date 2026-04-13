@@ -58,11 +58,15 @@ export function OnboardingScreen() {
   const { setScreen } = useAppStore();
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const goToLogin = () => {
+    setScreen("login");
+  };
+
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      setScreen("health-info");
+      goToLogin();
     }
   };
 
@@ -80,7 +84,7 @@ export function OnboardingScreen() {
       {/* 건너뛰기 버튼 */}
       <div className="flex justify-end px-5 pt-12 pb-2">
         <button
-          onClick={() => setScreen("health-info")}
+          onClick={goToLogin}
           className="text-[13px] font-semibold text-[#9B9B9B] hover:text-[#3C3C3C] transition-colors px-3 py-1.5"
         >
           건너뛰기
