@@ -52,22 +52,26 @@ function ButtonGroup({
   options,
   value,
   onChange,
+  disabled = false,
 }: {
   options: { label: string; value: any }[];
   value: any;
   onChange: (val: any) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-2 mt-2.5">
       {options.map((opt) => (
         <button
           key={String(opt.value)}
-          onClick={() => onChange(opt.value)}
+          onClick={() => !disabled && onChange(opt.value)}
+          disabled={disabled}
           className={cn(
             "flex-1 min-w-[72px] py-2.5 px-3 rounded-xl text-[14px] font-semibold transition-all",
             value === opt.value
               ? "bg-[#87D57B] text-white"
-              : "bg-[#F5F5F5] text-[#6A6A6A] hover:bg-[#E8E8E8]",
+              : "bg-[#F5F5F5] text-[#6A6A6A]",
+            disabled ? "cursor-not-allowed opacity-70" : "hover:bg-[#E8E8E8]",
           )}
         >
           {opt.label}
@@ -99,16 +103,20 @@ function QuestionRow({
 }
 
 export function HealthInfoScreen() {
-  const { setScreen, setUserProfile } = useAppStore();
+  const { setScreen, setUserProfile, kakaoProfile, setKakaoProfile } =
+    useAppStore();
   const [step, setStep] = useState(1);
 
+  // 카카오 로그인 경유 여부
+  const isKakao = !!kakaoProfile;
+
   const [formData, setFormData] = useState({
-    email: "",
+    email: kakaoProfile?.email ?? "",
     password: "",
     passwordConfirm: "",
-    name: "",
+    name: kakaoProfile?.name ?? "",
     age: "",
-    gender: "" as "male" | "female" | "",
+    gender: (kakaoProfile?.gender ?? "") as "male" | "female" | "",
     height: "",
     weight: "",
     highBp: null as boolean | null,
@@ -125,12 +133,15 @@ export function HealthInfoScreen() {
     diabetesStatus: "" as "1" | "2" | "unknown" | "none" | "",
   });
 
-  const [isEmailChecked, setIsEmailChecked] = useState(false);
-  const [emailMessage, setEmailMessage] = useState("");
+  const [isEmailChecked, setIsEmailChecked] = useState(isKakao); // 카카오는 이메일 인증 생략
+  const [emailMessage, setEmailMessage] = useState(
+    isKakao ? "카카오 계정 이메일이 자동으로 입력되었습니다." : "",
+  );
 
-  const isPasswordValid = formData.password.length >= 6;
+  const isPasswordValid = isKakao || formData.password.length >= 6;
   const passwordsMatch =
-    formData.password && formData.password === formData.passwordConfirm;
+    isKakao ||
+    (!!formData.password && formData.password === formData.passwordConfirm);
 
   const step1Valid =
     isEmailChecked &&
@@ -217,6 +228,7 @@ export function HealthInfoScreen() {
       lastActiveDate: new Date(),
     });
 
+    setKakaoProfile(null); // 가입 완료 후 임시 데이터 정리
     if (formData.diabetesStatus === "none") setScreen("analysis");
     else setScreen("permissions");
   };
@@ -295,89 +307,95 @@ export function HealthInfoScreen() {
                     placeholder="example@email.com"
                     value={formData.email}
                     onChange={handleEmailChange}
-                    className="flex-1 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
-                  />
-                  <button
-                    onClick={handleEmailCheck}
-                    disabled={!formData.email || isEmailChecked}
+                    disabled={isKakao}
                     className={cn(
-                      "h-11 px-3.5 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors",
-                      isEmailChecked
-                        ? "bg-[#E8F9D6] text-[#3E8C28]"
-                        : "bg-[#87D57B] hover:bg-[#6DC462] text-white disabled:opacity-40",
+                      "flex-1 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
+                      isKakao && "opacity-60 cursor-not-allowed",
                     )}
-                  >
-                    {isEmailChecked ? "확인 완료" : "중복 확인"}
-                  </button>
-                </div>
-                {emailMessage && (
-                  <div className={cn("flex items-center gap-1.5 mt-2")}>
-                    {isEmailChecked ? (
-                      <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
-                    ) : (
-                      <AlertCircle className="size-3.5 text-[#C0305A] shrink-0" />
-                    )}
-                    <p
+                  />
+                  {!isKakao && (
+                    <button
+                      onClick={handleEmailCheck}
+                      disabled={!formData.email || isEmailChecked}
                       className={cn(
-                        "text-[12px] font-medium",
-                        isEmailChecked ? "text-[#3E8C28]" : "text-[#C0305A]",
+                        "h-11 px-3.5 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors",
+                        isEmailChecked
+                          ? "bg-[#E8F9D6] text-[#3E8C28]"
+                          : "bg-[#87D57B] hover:bg-[#6DC462] text-white disabled:opacity-40",
                       )}
                     >
+                      {isEmailChecked ? "확인 완료" : "중복 확인"}
+                    </button>
+                  )}
+                </div>
+                {emailMessage && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
+                    <p className="text-[12px] font-medium text-[#3E8C28]">
                       {emailMessage}
                     </p>
                   </div>
                 )}
               </QuestionRow>
 
-              {/* 비밀번호 */}
-              <QuestionRow label="비밀번호">
-                <div className="space-y-2 mt-2.5">
-                  <Input
-                    type="password"
-                    placeholder="비밀번호 (6자 이상)"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
-                  />
-                  <Input
-                    type="password"
-                    placeholder="비밀번호 재입력"
-                    value={formData.passwordConfirm}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        passwordConfirm: e.target.value,
-                      })
-                    }
-                    className="h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
-                  />
-                  {formData.passwordConfirm && (
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      {passwordsMatch && isPasswordValid ? (
-                        <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
-                      ) : (
-                        <AlertCircle className="size-3.5 text-[#C0305A] shrink-0" />
-                      )}
-                      <p
-                        className={cn(
-                          "text-[12px] font-medium",
-                          passwordsMatch && isPasswordValid
-                            ? "text-[#3E8C28]"
-                            : "text-[#C0305A]",
-                        )}
-                      >
-                        {!isPasswordValid
-                          ? "비밀번호는 6자 이상이어야 합니다."
-                          : !passwordsMatch
-                            ? "비밀번호가 일치하지 않습니다."
-                            : "비밀번호가 일치합니다."}
-                      </p>
-                    </div>
-                  )}
+              {/* 비밀번호 — 카카오 유저는 불필요하므로 숨김 */}
+              {isKakao ? (
+                <div className="flex items-center gap-2.5 bg-[#FFF9E6] rounded-xl px-3.5 py-3">
+                  <span className="text-base">🔐</span>
+                  <p className="text-[12px] font-medium text-[#8C7010]">
+                    카카오 로그인 사용자는 비밀번호가 필요 없어요
+                  </p>
                 </div>
-              </QuestionRow>
+              ) : (
+                <QuestionRow label="비밀번호">
+                  <div className="space-y-2 mt-2.5">
+                    <Input
+                      type="password"
+                      placeholder="비밀번호 (6자 이상)"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className="h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="비밀번호 재입력"
+                      value={formData.passwordConfirm}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          passwordConfirm: e.target.value,
+                        })
+                      }
+                      className="h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
+                    />
+                    {formData.passwordConfirm && (
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {passwordsMatch && isPasswordValid ? (
+                          <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
+                        ) : (
+                          <AlertCircle className="size-3.5 text-[#C0305A] shrink-0" />
+                        )}
+                        <p
+                          className={cn(
+                            "text-[12px] font-medium",
+                            passwordsMatch && isPasswordValid
+                              ? "text-[#3E8C28]"
+                              : "text-[#C0305A]",
+                          )}
+                        >
+                          {!isPasswordValid
+                            ? "비밀번호는 6자 이상이어야 합니다."
+                            : !passwordsMatch
+                              ? "비밀번호가 일치하지 않습니다."
+                              : "비밀번호가 일치합니다."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </QuestionRow>
+              )}
             </div>
 
             {/* 개인 정보 */}
@@ -397,12 +415,25 @@ export function HealthInfoScreen() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="mt-2.5 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]"
+                  disabled={isKakao && !!kakaoProfile?.name}
+                  className={cn(
+                    "mt-2.5 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
+                    isKakao &&
+                      kakaoProfile?.name &&
+                      "opacity-60 cursor-not-allowed",
+                  )}
                 />
               </QuestionRow>
 
               {/* 나이 */}
-              <QuestionRow label="나이">
+              <QuestionRow
+                label="나이"
+                sub={
+                  isKakao && kakaoProfile?.ageRange
+                    ? `카카오 제공 연령대: ${kakaoProfile.ageRange}세`
+                    : undefined
+                }
+              >
                 <Input
                   type="number"
                   placeholder="나이를 입력하세요"
@@ -423,6 +454,7 @@ export function HealthInfoScreen() {
                   ]}
                   value={formData.gender}
                   onChange={(v) => setFormData({ ...formData, gender: v })}
+                  disabled={isKakao && !!kakaoProfile?.gender}
                 />
               </QuestionRow>
             </div>
@@ -665,7 +697,7 @@ export function HealthInfoScreen() {
                       formData.diabetesStatus === opt.value
                         ? opt.value === "none"
                           ? "bg-[#87D57B] text-white"
-                          : "bg-[#1A8A6A] text-white"
+                          : "bg-[#87D57B] text-white"
                         : "bg-[#F5F5F5] text-[#6A6A6A] hover:bg-[#E8E8E8]",
                     )}
                   >
@@ -675,9 +707,9 @@ export function HealthInfoScreen() {
               </div>
               {formData.diabetesStatus &&
                 formData.diabetesStatus !== "none" && (
-                  <div className="flex items-center gap-2 mt-3 bg-[#D6FFF0] rounded-xl px-3.5 py-2.5">
-                    <Leaf className="size-3.5 text-[#1A8A6A] shrink-0" />
-                    <p className="text-[12px] font-medium text-[#1A8A6A]">
+                  <div className="flex items-center gap-2 mt-3 bg-[#fff9e6] rounded-xl px-3.5 py-2.5">
+                    <Leaf className="size-3.5 text-[#8c7010] shrink-0" />
+                    <p className="text-[12px] font-medium text-[#8c7010]">
                       당뇨 맞춤형 미션과 식단이 제공됩니다.
                     </p>
                   </div>

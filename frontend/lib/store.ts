@@ -21,6 +21,15 @@ interface AppState {
   setAutoLogin: (auto: boolean) => void;
   logout: () => void;
 
+  kakaoProfile: {
+    id: number;
+    email: string;
+    name: string;
+    gender?: "male" | "female";
+    ageRange?: string;
+  } | null;
+  setKakaoProfile: (profile: AppState["kakaoProfile"]) => void;
+
   userProfile: UserProfile | null;
   // ✨ 프로필 저장 시 맞춤형 미션도 함께 세팅되도록 변경
   setUserProfile: (profile: UserProfile) => void;
@@ -539,6 +548,9 @@ export const useAppStore = create<AppState>()(
       autoLogin: false,
       setAutoLogin: (auto) => set({ autoLogin: auto }),
       logout: () => set({ isAuthenticated: false, currentScreen: "login" }),
+
+      kakaoProfile: null,
+      setKakaoProfile: (profile) => set({ kakaoProfile: profile }),
 
       userProfile: null,
 

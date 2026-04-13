@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import "@/src/home.css";
 import { useAppStore } from "@/lib/store";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BottomNav } from "@/components/ui/navigation-menu";
@@ -20,18 +21,20 @@ import {
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
 import { Button } from "@/components/ui/button";
+import { fetchRecommendations, fetchCharacter, CHARACTER_THEME } from "@/lib/api";
+import type { CorrectionStatus, RiskChangeSummary, OverallState } from "@/lib/api";
 
 /* ─────────────────────────────────────────────────────────────
    타입 & 상수
 ───────────────────────────────────────────────────────────── */
-interface Recommendation {
+interface LocalRec {
   id: string;
   title: string;
   reason: string;
   source: string;
 }
 
-const AI_RECOMMENDATIONS: Recommendation[] = [
+const AI_RECOMMENDATIONS: LocalRec[] = [
   {
     id: "rec-1",
     title: "점심 시간 15분 걷기로 전환해보세요.",
@@ -52,6 +55,55 @@ const MOOD_EMOJI: Record<string, string> = {
   sad: "😢",
   sick: "🤒",
 };
+
+/* ─────────────────────────────────────────────────────────────
+   테스트 패널용 상수 & 헬퍼
+───────────────────────────────────────────────────────────── */
+const OVERALL_STATE_OPTIONS: {
+  value: OverallState;
+  emoji: string;
+  label: string;
+}[] = [
+  { value: "happy",      emoji: "😄", label: "happy" },
+  { value: "energetic",  emoji: "😊", label: "energetic" },
+  { value: "recovering", emoji: "😌", label: "recovering" },
+  { value: "tired",      emoji: "😪", label: "tired" },
+  { value: "struggling", emoji: "😢", label: "struggling" },
+];
+
+const TEST_RISK_SCENARIOS: {
+  label: string;
+  data: RiskChangeSummary;
+}[] = [
+  {
+    label: "큰 개선 ▼16%",
+    data: { previous_probability: 68, current_probability: 52, change: 16, improved: true,  message: "68% → 52%" },
+  },
+  {
+    label: "소폭 개선 ▼6%",
+    data: { previous_probability: 68, current_probability: 62, change: 6,  improved: true,  message: "68% → 62%" },
+  },
+  {
+    label: "소폭 악화 ▲6%",
+    data: { previous_probability: 52, current_probability: 58, change: 6,  improved: false, message: "52% → 58%" },
+  },
+  {
+    label: "큰 악화 ▲18%",
+    data: { previous_probability: 52, current_probability: 70, change: 18, improved: false, message: "52% → 70%" },
+  },
+];
+
+function getCharacterMessage(r: RiskChangeSummary): string {
+  const { previous_probability: prev, current_probability: curr, change, improved } = r;
+  const abs = Math.abs(change);
+  if (improved && abs >= 15)
+    return `와! 위험도가 ${prev}%에서 ${curr}%로 떨어졌어! 정말 대단해! 🎉`;
+  if (improved && abs >= 5)
+    return `위험도가 ${prev}%에서 ${curr}%로 줄었어! 노력하고 있구나! 💪`;
+  if (!improved && abs >= 15)
+    return `위험도가 올랐어... 같이 다시 해보자! 🤝`;
+  return `위험도가 조금 올랐어. 괜찮아, 천천히 시작하자. 😊`;
+}
 
 const MOOD_STAT: Record<string, number> = {
   happy: 95,
@@ -77,7 +129,16 @@ function StatChip({
   iconBg: string;
 }) {
   return (
-    <div className="flex-1 bg-white/70 rounded-2xl px-3 py-3 border border-white flex flex-col items-center gap-1.5 shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
+    <div
+      className="flex-1 rounded-2xl px-3 py-3 flex flex-col items-center gap-1.5"
+      style={{
+        background: "rgba(255,255,255,0.72)",
+        border: "1px solid rgba(255,255,255,0.9)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+      }}
+    >
       {/* 아이콘 원형 배경 */}
       <div
         className="size-8 rounded-full flex items-center justify-center"
@@ -183,6 +244,42 @@ export function HomeScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
+  /* ── ML API 상태 ── */
+  const [correctionStatus, setCorrectionStatus] = useState<CorrectionStatus | null>(null);
+  const [escalationMessage, setEscalationMessage] = useState<string | undefined>(undefined);
+  const [displayRecs, setDisplayRecs] = useState<LocalRec[]>(AI_RECOMMENDATIONS);
+  const [riskChangeSummary, setRiskChangeSummary] = useState<RiskChangeSummary | null>(null);
+  const [overallState, setOverallState] = useState<OverallState | null>(null);
+
+  /* ── 테스트 패널 ── */
+  const [showTestPanel, setShowTestPanel] = useState(false);
+
+  /* ── ML API 호출 (백엔드 준비 후 아래 주석 해제) ── */
+  // useEffect(() => {
+  //   const userId = userProfile?.id ?? "guest";
+  //   fetchRecommendations({ user_id: userId })
+  //     .then((data) => {
+  //       setCorrectionStatus(data.correction_status);
+  //       setEscalationMessage(data.escalation_message);
+  //       if (data.correction_status !== "ESCALATED") {
+  //         const mapped: LocalRec[] = data.recommendations.map((r, i) => ({
+  //           id: `api-${i}`,
+  //           title: r.action,
+  //           reason: r.reason,
+  //           source: r.evidence_source,
+  //         }));
+  //         setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
+  //       }
+  //     })
+  //     .catch(() => {});
+  //   fetchCharacter()
+  //     .then((data) => {
+  //       setOverallState(data.character_state.overall_state);
+  //       setRiskChangeSummary(data.risk_change_summary);
+  //     })
+  //     .catch(() => {});
+  // }, [userProfile?.id]);
+
   /* ── 걷기 미션 자동 증가 ── */
   useEffect(() => {
     const interval = setInterval(() => {
@@ -242,12 +339,95 @@ export function HomeScreen() {
   /* ═══════════════════════════════════════════════════════════
      렌더
   ══════════════════════════════════════════════════════════ */
+  const heroBg = overallState ? CHARACTER_THEME[overallState].bgColor : "#F9FFEF";
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FFEF]">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: heroBg, transition: "background-color 0.5s ease" }}
+    >
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
-      <div className="relative flex flex-col items-center px-5 pt-14 pb-7">
+      <div className="retro-scene relative flex flex-col items-center px-5 pt-14 pb-7">
+        {/* ── 떠다니는 도형들 ── */}
+        {/* 좌상단 영역 */}
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-sm ra-1"
+          style={{ top: "10%", left: "8%", animationDelay: "0s" }}
+        />
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-xs ra-2"
+          style={{ top: "18%", left: "22%", animationDelay: "0.8s" }}
+        />
+        <span
+          className="retro-shape rs-square   rc-green  rz-sm ra-2"
+          style={{ top: "14%", left: "6%", animationDelay: "0.4s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-white  rz-xs ra-6"
+          style={{ top: "8%", left: "38%", animationDelay: "1.2s" }}
+        />
+
+        {/* 우상단 영역 */}
+        <span
+          className="retro-shape rs-diamond  rc-green  rz-sm ra-1"
+          style={{ top: "12%", right: "10%", animationDelay: "0.6s" }}
+        />
+        <span
+          className="retro-shape rs-square   rc-green  rz-md ra-5"
+          style={{ top: "22%", right: "6%", animationDelay: "1.5s" }}
+        />
+        <span
+          className="retro-shape rs-ring     rc-white  rz-sm ra-3"
+          style={{ top: "8%", right: "28%", animationDelay: "0.3s" }}
+        />
+
+        {/* 좌중앙 영역 */}
+        <span
+          className="retro-shape rs-circle   rc-red    rz-md ra-3"
+          style={{ top: "42%", left: "4%", animationDelay: "2.1s" }}
+        />
+        <span
+          className="retro-shape rs-diamond  rc-yellow rz-xs ra-4"
+          style={{ top: "36%", left: "16%", animationDelay: "1.0s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-green  rz-xs ra-6"
+          style={{ top: "52%", left: "10%", animationDelay: "0.2s" }}
+        />
+
+        {/* 우중앙 영역 */}
+        <span
+          className="retro-shape rs-circle   rc-red    rz-lg ra-5"
+          style={{ top: "48%", right: "3%", animationDelay: "1.8s" }}
+        />
+        <span
+          className="retro-shape rs-ring     rc-yellow rz-sm ra-2"
+          style={{ top: "38%", right: "18%", animationDelay: "0.7s" }}
+        />
+        <span
+          className="retro-shape rs-triangle rc-blue   rz-xs ra-1"
+          style={{ top: "30%", right: "30%", animationDelay: "2.4s" }}
+        />
+
+        {/* 하단 영역 */}
+        <span
+          className="retro-shape rs-square   rc-green  rz-lg ra-2"
+          style={{ bottom: "24%", left: "3%", animationDelay: "1.3s" }}
+        />
+        <span
+          className="retro-shape rs-circle   rc-red    rz-xl ra-5"
+          style={{ bottom: "18%", left: "18%", animationDelay: "0.9s" }}
+        />
+        <span
+          className="retro-shape rs-circle   rc-red    rz-lg ra-3"
+          style={{ bottom: "16%", right: "8%", animationDelay: "2.0s" }}
+        />
+        <span
+          className="retro-shape rs-dot      rc-yellow rz-xs ra-6"
+          style={{ bottom: "30%", right: "22%", animationDelay: "0.5s" }}
+        />
         {/* 최상단: 스트릭 + 포인트 */}
         <div className="w-full flex items-center justify-between mb-5">
           <div>
@@ -381,6 +561,48 @@ export function HomeScreen() {
             iconBg="#E9FBA4"
           />
         </div>
+
+        {/* ── 위험도 변화 요약 (재예측 시에만 표시) ── */}
+        {riskChangeSummary && (
+          <div
+            className="w-full mt-3 rounded-2xl px-4 py-3 flex items-center gap-3"
+            style={{
+              background: "rgba(255,255,255,0.72)",
+              border: "1px solid rgba(255,255,255,0.9)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div
+              className="size-9 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                backgroundColor: riskChangeSummary.improved ? "#D5F5E3" : "#FADBD8",
+              }}
+            >
+              <TrendingUp
+                className="size-4"
+                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+                strokeWidth={2.5}
+              />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-[#6A6A6A] uppercase tracking-[0.07em] mb-0.5">
+                위험도 변화
+              </p>
+              <p
+                className="text-[15px] font-black leading-none"
+                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+              >
+                {riskChangeSummary.message}{" "}
+                <span className="text-[13px]">
+                  ({riskChangeSummary.improved ? "▼" : "▲"}
+                  {Math.abs(riskChangeSummary.change)}%)
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ════════════════════════════════════════
@@ -389,60 +611,78 @@ export function HomeScreen() {
       ════════════════════════════════════════ */}
       <div className="flex-1 px-4 pb-28 space-y-4">
         {/* ── 오늘의 추천 ── */}
-        {AI_RECOMMENDATIONS.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-2.5 px-1">
-              <h2 className="text-[17px] font-bold text-[#1A2E1C]">
-                오늘의 추천
-              </h2>
-              <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
-                AI 분석
-              </span>
+        <section>
+          {/* ESCALATED: 추천 숨기고 경고 배너만 표시 */}
+          {correctionStatus === "ESCALATED" ? (
+            <div className="rounded-2xl bg-[#FFF0F0] border border-[#F09BB0] p-5 flex items-start gap-3">
+              <div className="size-9 rounded-xl bg-[#FFB8CA] flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck className="size-5 text-[#C0305A]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-[#C0305A] mb-1">
+                  의료진 상담이 필요해요
+                </p>
+                <p className="text-[13px] text-[#9B3A55] leading-relaxed">
+                  {escalationMessage ??
+                    "현재 상태에서는 AI 추천을 제공하기 어렵습니다. 가까운 의료기관에 방문해 주세요."}
+                </p>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-2.5 px-1">
+                <h2 className="text-[17px] font-bold text-[#1A2E1C]">
+                  오늘의 추천
+                </h2>
+                <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
+                  AI 분석
+                </span>
+              </div>
 
-            <div className="space-y-3">
-              {AI_RECOMMENDATIONS.map((rec, idx) => {
-                const isFirst = idx === 0;
-                return (
-                  <div
-                    key={rec.id}
-                    className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-                          isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
-                        )}
-                      >
-                        <Sparkles
+              <div className="space-y-3">
+                {displayRecs.map((rec, idx) => {
+                  const isFirst = idx === 0;
+                  return (
+                    <div
+                      key={rec.id}
+                      className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
                           className={cn(
-                            "size-4",
-                            isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+                            "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                            isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
                           )}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
-                          {rec.title}
-                        </p>
-                        <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
-                          {rec.reason}
-                        </p>
-                        <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
-                          <BookOpen className="size-3 text-[#9B9B9B]" />
-                          <span className="text-[11px] text-[#9B9B9B] font-medium">
-                            {rec.source}
-                          </span>
+                        >
+                          <Sparkles
+                            className={cn(
+                              "size-4",
+                              isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+                            )}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
+                            {rec.title}
+                          </p>
+                          <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
+                            {rec.reason}
+                          </p>
+                          <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
+                            <BookOpen className="size-3 text-[#9B9B9B]" />
+                            <span className="text-[11px] text-[#9B9B9B] font-medium">
+                              {rec.source}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
 
         {/* ── 오늘의 미션 ── */}
         <section>
@@ -542,7 +782,151 @@ export function HomeScreen() {
             </div>
           </div>
         </section>
-      </div>
+
+        {/* ══════════════════════════════════════
+            🧪 테스트 패널 (개발용)
+        ══════════════════════════════════════ */}
+        <div>
+        <button
+          onClick={() => setShowTestPanel((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-[12px] font-bold text-[#7A7A7A] bg-[#F0F0F0] hover:bg-[#E4E4E4] transition-colors"
+        >
+          <span>🧪 테스트 패널 (개발용)</span>
+          <span className="text-[10px]">{showTestPanel ? "▲ 접기" : "▼ 펼치기"}</span>
+        </button>
+
+        {showTestPanel && (
+          <div className="mt-2 rounded-2xl border border-[#E0E0E0] bg-white overflow-hidden divide-y divide-[#F0F0F0]">
+
+            {/* ── overall_state ── */}
+            <div className="p-4">
+              <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
+                overall_state — 캐릭터 배경색
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {OVERALL_STATE_OPTIONS.map(({ value, emoji, label }) => {
+                  const theme = CHARACTER_THEME[value];
+                  const isActive = overallState === value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setOverallState(value)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold transition-all"
+                      style={{
+                        backgroundColor: isActive ? theme.bgColor : "#F5F5F5",
+                        border: isActive ? `2px solid #3E8C28` : "2px solid transparent",
+                        color: isActive ? "#1A2E1C" : "#7A7A7A",
+                      }}
+                    >
+                      <span>{emoji}</span>
+                      <span>{label}</span>
+                      <span
+                        className="size-3 rounded-full ml-0.5 shrink-0"
+                        style={{ backgroundColor: theme.bgColor, border: "1px solid #ccc" }}
+                      />
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setOverallState(null)}
+                  className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
+                >
+                  초기화
+                </button>
+              </div>
+
+              {/* 현재 배경색 미리보기 */}
+              {overallState && (
+                <div
+                  className="mt-3 rounded-xl px-3 py-2 flex items-center gap-2"
+                  style={{ backgroundColor: CHARACTER_THEME[overallState].bgColor }}
+                >
+                  <span className="text-[11px] font-bold text-[#5A5A5A]">
+                    현재 배경색 →
+                  </span>
+                  <span className="text-[11px] font-mono text-[#3C3C3C]">
+                    {CHARACTER_THEME[overallState].bgColor}
+                  </span>
+                  <span className="text-[11px] font-bold text-[#3C3C3C]">
+                    ({CHARACTER_THEME[overallState].label})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── risk_change_summary ── */}
+            <div className="p-4">
+              <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
+                risk_change_summary — 위험도 변화 & 캐릭터 대사
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {TEST_RISK_SCENARIOS.map(({ label, data }) => {
+                  const isActive =
+                    riskChangeSummary?.message === data.message &&
+                    riskChangeSummary?.improved === data.improved;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => setRiskChangeSummary(data)}
+                      className="px-3 py-2 rounded-xl text-[12px] font-bold transition-all border-2"
+                      style={{
+                        backgroundColor: isActive
+                          ? data.improved ? "#E8F9D6" : "#FFE4ED"
+                          : "#F5F5F5",
+                        borderColor: isActive
+                          ? data.improved ? "#3E8C28" : "#C0305A"
+                          : "transparent",
+                        color: isActive
+                          ? data.improved ? "#2A6020" : "#C0305A"
+                          : "#7A7A7A",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setRiskChangeSummary(null)}
+                  className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
+                >
+                  null (숨김)
+                </button>
+              </div>
+
+              {/* 캐릭터 대사 미리보기 */}
+              {riskChangeSummary && (
+                <div
+                  className="mt-3 rounded-xl px-4 py-3 border"
+                  style={{
+                    backgroundColor: riskChangeSummary.improved ? "#F0FDF4" : "#FFF0F0",
+                    borderColor: riskChangeSummary.improved ? "#CBF891" : "#F09BB0",
+                  }}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[0.06em] mb-1.5"
+                    style={{ color: riskChangeSummary.improved ? "#2A6020" : "#C0305A" }}>
+                    캐릭터 대사 미리보기
+                  </p>
+                  <p className="text-[13px] font-bold leading-relaxed"
+                    style={{ color: riskChangeSummary.improved ? "#1A4020" : "#8B1A1A" }}>
+                    "{getCharacterMessage(riskChangeSummary)}"
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 pt-2 border-t"
+                    style={{ borderColor: riskChangeSummary.improved ? "#CBF891" : "#F09BB0" }}>
+                    <span className="text-[11px] text-[#7A7A7A]">
+                      변화량: <b>{riskChangeSummary.improved ? "▼" : "▲"}{riskChangeSummary.change}%</b>
+                    </span>
+                    <span className="text-[11px] text-[#7A7A7A]">
+                      {riskChangeSummary.previous_probability}% → {riskChangeSummary.current_probability}%
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+        </div>
+      </div>{/* flex-1 scroll area end */}
 
       {/* ── 하단 내비게이션 ── */}
       <BottomNav />
