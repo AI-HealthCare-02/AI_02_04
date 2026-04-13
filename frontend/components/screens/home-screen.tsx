@@ -21,18 +21,20 @@ import {
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
 import { Button } from "@/components/ui/button";
+import { fetchRecommendations, fetchCharacter, CHARACTER_THEME } from "@/lib/api";
+import type { CorrectionStatus, RiskChangeSummary, OverallState } from "@/lib/api";
 
 /* ─────────────────────────────────────────────────────────────
    타입 & 상수
 ───────────────────────────────────────────────────────────── */
-interface Recommendation {
+interface LocalRec {
   id: string;
   title: string;
   reason: string;
   source: string;
 }
 
-const AI_RECOMMENDATIONS: Recommendation[] = [
+const AI_RECOMMENDATIONS: LocalRec[] = [
   {
     id: "rec-1",
     title: "점심 시간 15분 걷기로 전환해보세요.",
@@ -193,6 +195,45 @@ export function HomeScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
+  /* ── ML API 상태 ── */
+  const [correctionStatus, setCorrectionStatus] = useState<CorrectionStatus | null>(null);
+  const [escalationMessage, setEscalationMessage] = useState<string | undefined>(undefined);
+  const [displayRecs, setDisplayRecs] = useState<LocalRec[]>(AI_RECOMMENDATIONS);
+  const [riskChangeSummary, setRiskChangeSummary] = useState<RiskChangeSummary | null>(null);
+  const [overallState, setOverallState] = useState<OverallState | null>(null);
+
+  /* ── ML API 호출 ── */
+  useEffect(() => {
+    const userId = userProfile?.id ?? "guest";
+
+    fetchRecommendations({ user_id: userId })
+      .then((data) => {
+        setCorrectionStatus(data.correction_status);
+        setEscalationMessage(data.escalation_message);
+        if (data.correction_status !== "ESCALATED") {
+          const mapped: LocalRec[] = data.recommendations.map((r, i) => ({
+            id: `api-${i}`,
+            title: r.action,
+            reason: r.reason,
+            source: r.evidence_source,
+          }));
+          setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
+        }
+      })
+      .catch(() => {
+        /* API 실패 시 하드코딩 목업 유지 */
+      });
+
+    fetchCharacter()
+      .then((data) => {
+        setOverallState(data.character_state.overall_state);
+        setRiskChangeSummary(data.risk_change_summary);
+      })
+      .catch(() => {
+        /* API 실패 시 기본 상태 유지 */
+      });
+  }, [userProfile?.id]);
+
   /* ── 걷기 미션 자동 증가 ── */
   useEffect(() => {
     const interval = setInterval(() => {
@@ -252,8 +293,13 @@ export function HomeScreen() {
   /* ═══════════════════════════════════════════════════════════
      렌더
   ══════════════════════════════════════════════════════════ */
+  const heroBg = overallState ? CHARACTER_THEME[overallState].bgColor : "#F9FFEF";
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FFEF]">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: heroBg, transition: "background-color 0.5s ease" }}
+    >
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
@@ -469,6 +515,48 @@ export function HomeScreen() {
             iconBg="#E9FBA4"
           />
         </div>
+
+        {/* ── 위험도 변화 요약 (재예측 시에만 표시) ── */}
+        {riskChangeSummary && (
+          <div
+            className="w-full mt-3 rounded-2xl px-4 py-3 flex items-center gap-3"
+            style={{
+              background: "rgba(255,255,255,0.72)",
+              border: "1px solid rgba(255,255,255,0.9)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div
+              className="size-9 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                backgroundColor: riskChangeSummary.improved ? "#D5F5E3" : "#FADBD8",
+              }}
+            >
+              <TrendingUp
+                className="size-4"
+                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+                strokeWidth={2.5}
+              />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-[#6A6A6A] uppercase tracking-[0.07em] mb-0.5">
+                위험도 변화
+              </p>
+              <p
+                className="text-[15px] font-black leading-none"
+                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+              >
+                {riskChangeSummary.message}{" "}
+                <span className="text-[13px]">
+                  ({riskChangeSummary.improved ? "▼" : "▲"}
+                  {Math.abs(riskChangeSummary.change)}%)
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ════════════════════════════════════════
@@ -477,60 +565,78 @@ export function HomeScreen() {
       ════════════════════════════════════════ */}
       <div className="flex-1 px-4 pb-28 space-y-4">
         {/* ── 오늘의 추천 ── */}
-        {AI_RECOMMENDATIONS.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-2.5 px-1">
-              <h2 className="text-[17px] font-bold text-[#1A2E1C]">
-                오늘의 추천
-              </h2>
-              <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
-                AI 분석
-              </span>
+        <section>
+          {/* ESCALATED: 추천 숨기고 경고 배너만 표시 */}
+          {correctionStatus === "ESCALATED" ? (
+            <div className="rounded-2xl bg-[#FFF0F0] border border-[#F09BB0] p-5 flex items-start gap-3">
+              <div className="size-9 rounded-xl bg-[#FFB8CA] flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck className="size-5 text-[#C0305A]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-[#C0305A] mb-1">
+                  의료진 상담이 필요해요
+                </p>
+                <p className="text-[13px] text-[#9B3A55] leading-relaxed">
+                  {escalationMessage ??
+                    "현재 상태에서는 AI 추천을 제공하기 어렵습니다. 가까운 의료기관에 방문해 주세요."}
+                </p>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-2.5 px-1">
+                <h2 className="text-[17px] font-bold text-[#1A2E1C]">
+                  오늘의 추천
+                </h2>
+                <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
+                  AI 분석
+                </span>
+              </div>
 
-            <div className="space-y-3">
-              {AI_RECOMMENDATIONS.map((rec, idx) => {
-                const isFirst = idx === 0;
-                return (
-                  <div
-                    key={rec.id}
-                    className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-                          isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
-                        )}
-                      >
-                        <Sparkles
+              <div className="space-y-3">
+                {displayRecs.map((rec, idx) => {
+                  const isFirst = idx === 0;
+                  return (
+                    <div
+                      key={rec.id}
+                      className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
                           className={cn(
-                            "size-4",
-                            isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+                            "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                            isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
                           )}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
-                          {rec.title}
-                        </p>
-                        <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
-                          {rec.reason}
-                        </p>
-                        <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
-                          <BookOpen className="size-3 text-[#9B9B9B]" />
-                          <span className="text-[11px] text-[#9B9B9B] font-medium">
-                            {rec.source}
-                          </span>
+                        >
+                          <Sparkles
+                            className={cn(
+                              "size-4",
+                              isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+                            )}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
+                            {rec.title}
+                          </p>
+                          <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
+                            {rec.reason}
+                          </p>
+                          <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
+                            <BookOpen className="size-3 text-[#9B9B9B]" />
+                            <span className="text-[11px] text-[#9B9B9B] font-medium">
+                              {rec.source}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
 
         {/* ── 오늘의 미션 ── */}
         <section>
