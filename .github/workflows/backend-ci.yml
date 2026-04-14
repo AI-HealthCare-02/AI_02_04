@@ -41,8 +41,10 @@ jobs:
         run: pytest -v
         env:
           DATABASE_URL: sqlite:///./test.db
-          SECRET_KEY: test-secret-key
-          ALGORITHM: HS256
+          JWT_SECRET_KEY: test-secret-key-for-ci
+          JWT_ALGORITHM: HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES: 60
+          REFRESH_TOKEN_EXPIRE_DAYS: 7
 
       - name: Docker build check
         run: docker build -t dangmagochi-backend:${{ github.sha }} .
