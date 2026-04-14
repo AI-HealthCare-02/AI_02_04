@@ -2,6 +2,18 @@ import type { ApiError } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+/* ── 토큰 관리 ── */
+let _authToken = "";
+
+export function setAuthToken(token: string) {
+  _authToken = token;
+}
+
+export function getAuthToken() {
+  return _authToken;
+}
+
+/* ── 에러 클래스 ── */
 class HttpError extends Error {
   constructor(public readonly error: ApiError) {
     super(error.message);
@@ -9,18 +21,19 @@ class HttpError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+/* ── 공통 fetch ── */
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(_authToken ? { Authorization: `Bearer ${_authToken}` } : {}),
+    ...(options.headers as Record<string, string>),
+  };
+
   const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!res.ok) {

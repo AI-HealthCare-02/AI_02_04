@@ -14,5 +14,5 @@ import type {
 export async function fetchRecommendations(
   body: RecommendationsRequest
 ): Promise<RecommendationsResponse> {
-  return client.post<RecommendationsResponse>("/recommendations", body);
+  return client.post<RecommendationsResponse>("/recommend", body);
 }
