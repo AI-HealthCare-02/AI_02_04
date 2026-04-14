@@ -68,9 +68,9 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             "access_token":  access_token,
             "refresh_token": refresh_token,
             "user_type":     user.user_type.value,
-            "goal":          user.goal.value if user.goal else None,
-            "risk_level":    user.risk_level.value if user.risk_level else None,
-            "diabetes_type": user.diabetes_type.value if user.diabetes_type else None,
+            "goal":          user.goal.value if user.goal else None,#type:ignore
+            "risk_level":    user.risk_level.value if user.risk_level else None, #type:ignore
+            "diabetes_type": user.diabetes_type.value if user.diabetes_type else None, #type:ignore
         }
     }
 

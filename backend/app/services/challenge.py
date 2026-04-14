@@ -96,7 +96,7 @@ DEFAULT_CHALLENGES = {
 def create_default_challenges(db: Session, user: User) -> None:
     challenges_to_create = DEFAULT_CHALLENGES["all"].copy()
 
-    if user.user_type.value == "rist":
+    if user.user_type.value == "risk":
         challenges_to_create += DEFAULT_CHALLENGES["risk"]
     elif user.user_type.value == "diabetes":
         challenges_to_create += DEFAULT_CHALLENGES["risk"]
@@ -179,7 +179,7 @@ def log_challenge(
         .first()
     )
 
-    if challenge.challenge_type == ChallengeType.accumulate: #type:ignore
+    if challenge.challenge_type == ChallengeType.accumulate:  # type:ignore
         if existing_log:
             existing_log.value += value  # type:ignore
             today_total = existing_log.value
@@ -194,6 +194,7 @@ def log_challenge(
                 ),
             )
             db.add(existing_log)
+            db.flush()
             today_total = value
 
         is_completed = today_total >= challenge.target_value
@@ -220,7 +221,7 @@ def log_challenge(
         today_total = value
         is_completed = value == 1
     points_earned = 0
-    if is_completed and existing_log.points_earned == 0: #type:ignore
+    if is_completed and existing_log.points_earned == 0:  # type:ignore
         points_earned = challenge.points
         existing_log.points_earned = points_earned  # type: ignore
 
@@ -238,7 +239,7 @@ def log_challenge(
         )
         db.add(history)
 
-        _update_character_exp(db, user_id, points_earned)# type: ignore
+        _update_character_exp(db, user_id, points_earned)  # type: ignore
 
     # streak 계산
     streak_count = _calculate_streak(db, user_id, challenge_id)

@@ -1,16 +1,21 @@
 import sys
 import os
 from pathlib import Path
-
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.core.config import settings
 
 
+try:
+      sys.path.append("/ml/risk_model")
+      import config #type:ignore
+      config.SAVE_DIR = "/ml/risk_model/saved_models"
+except ModuleNotFoundError:
+      config = None
 
-sys.path.append("/ml/risk_model")
 
-import config #type:ignore
-config.SAVE_DIR = "/ml/risk_model/saved_models"
+
+
 
 
 _model = None
@@ -19,15 +24,21 @@ _threshold = None
 
 
 def get_model():
-  global _model, _feats, _threshold
-  if _model is None:
-    from predictor import load_model  # type: ignore
-    _model, _feats, _threshold = load_model()
-  return  _model, _feats, _threshold
+      global _model, _feats, _threshold
+      if _model is None:
+            try:
+                  from predictor import load_model  # type: ignore
+                  _model, _feats, _threshold = load_model()
+            except ModuleNotFoundError:
+                  return None, None, None
+                  
+      return  _model, _feats, _threshold
 
 
 def predict_diabetes_risk(user)->dict:
   model, feats, threshold = get_model()
+  if model is None:
+      raise HTTPException(status_code=503, detail="모델 미로드")
   input_data = {
         "HighBP":                int(user.is_hypertension or 0),
         "HighChol":              int(user.is_cholesterol or 0),
