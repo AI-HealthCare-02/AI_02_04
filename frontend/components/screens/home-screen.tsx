@@ -21,8 +21,16 @@ import {
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
 import { Button } from "@/components/ui/button";
-import { fetchRecommendations, fetchCharacter, CHARACTER_THEME } from "@/lib/api";
-import type { CorrectionStatus, RiskChangeSummary, OverallState } from "@/lib/api";
+import {
+  fetchRecommendations,
+  fetchCharacter,
+  CHARACTER_THEME,
+} from "@/lib/api";
+import type {
+  CorrectionStatus,
+  RiskChangeSummary,
+  OverallState,
+} from "@/lib/api";
 
 /* ─────────────────────────────────────────────────────────────
    타입 & 상수
@@ -64,10 +72,10 @@ const OVERALL_STATE_OPTIONS: {
   emoji: string;
   label: string;
 }[] = [
-  { value: "happy",      emoji: "😄", label: "happy" },
-  { value: "energetic",  emoji: "😊", label: "energetic" },
+  { value: "happy", emoji: "😄", label: "happy" },
+  { value: "energetic", emoji: "😊", label: "energetic" },
   { value: "recovering", emoji: "😌", label: "recovering" },
-  { value: "tired",      emoji: "😪", label: "tired" },
+  { value: "tired", emoji: "😪", label: "tired" },
   { value: "struggling", emoji: "😢", label: "struggling" },
 ];
 
@@ -77,31 +85,59 @@ const TEST_RISK_SCENARIOS: {
 }[] = [
   {
     label: "큰 개선 ▼16%",
-    data: { previous_probability: 68, current_probability: 52, change: 16, improved: true,  message: "68% → 52%" },
+    data: {
+      previous_probability: 68,
+      current_probability: 52,
+      change: 16,
+      improved: true,
+      message: "68% → 52%",
+    },
   },
   {
     label: "소폭 개선 ▼6%",
-    data: { previous_probability: 68, current_probability: 62, change: 6,  improved: true,  message: "68% → 62%" },
+    data: {
+      previous_probability: 68,
+      current_probability: 62,
+      change: 6,
+      improved: true,
+      message: "68% → 62%",
+    },
   },
   {
     label: "소폭 악화 ▲6%",
-    data: { previous_probability: 52, current_probability: 58, change: 6,  improved: false, message: "52% → 58%" },
+    data: {
+      previous_probability: 52,
+      current_probability: 58,
+      change: 6,
+      improved: false,
+      message: "52% → 58%",
+    },
   },
   {
     label: "큰 악화 ▲18%",
-    data: { previous_probability: 52, current_probability: 70, change: 18, improved: false, message: "52% → 70%" },
+    data: {
+      previous_probability: 52,
+      current_probability: 70,
+      change: 18,
+      improved: false,
+      message: "52% → 70%",
+    },
   },
 ];
 
 function getCharacterMessage(r: RiskChangeSummary): string {
-  const { previous_probability: prev, current_probability: curr, change, improved } = r;
+  const {
+    previous_probability: prev,
+    current_probability: curr,
+    change,
+    improved,
+  } = r;
   const abs = Math.abs(change);
   if (improved && abs >= 15)
     return `와! 위험도가 ${prev}%에서 ${curr}%로 떨어졌어! 정말 대단해! 🎉`;
   if (improved && abs >= 5)
     return `위험도가 ${prev}%에서 ${curr}%로 줄었어! 노력하고 있구나! 💪`;
-  if (!improved && abs >= 15)
-    return `위험도가 올랐어... 같이 다시 해보자! 🤝`;
+  if (!improved && abs >= 15) return `위험도가 올랐어... 같이 다시 해보자! 🤝`;
   return `위험도가 조금 올랐어. 괜찮아, 천천히 시작하자. 😊`;
 }
 
@@ -245,40 +281,45 @@ export function HomeScreen() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   /* ── ML API 상태 ── */
-  const [correctionStatus, setCorrectionStatus] = useState<CorrectionStatus | null>(null);
-  const [escalationMessage, setEscalationMessage] = useState<string | undefined>(undefined);
-  const [displayRecs, setDisplayRecs] = useState<LocalRec[]>(AI_RECOMMENDATIONS);
-  const [riskChangeSummary, setRiskChangeSummary] = useState<RiskChangeSummary | null>(null);
+  const [correctionStatus, setCorrectionStatus] =
+    useState<CorrectionStatus | null>(null);
+  const [escalationMessage, setEscalationMessage] = useState<
+    string | undefined
+  >(undefined);
+  const [displayRecs, setDisplayRecs] =
+    useState<LocalRec[]>(AI_RECOMMENDATIONS);
+  const [riskChangeSummary, setRiskChangeSummary] =
+    useState<RiskChangeSummary | null>(null);
   const [overallState, setOverallState] = useState<OverallState | null>(null);
 
   /* ── 테스트 패널 ── */
   const [showTestPanel, setShowTestPanel] = useState(false);
 
   /* ── ML API 호출 (백엔드 준비 후 아래 주석 해제) ── */
-  // useEffect(() => {
-  //   const userId = userProfile?.id ?? "guest";
-  //   fetchRecommendations({ user_id: userId })
-  //     .then((data) => {
-  //       setCorrectionStatus(data.correction_status);
-  //       setEscalationMessage(data.escalation_message);
-  //       if (data.correction_status !== "ESCALATED") {
-  //         const mapped: LocalRec[] = data.recommendations.map((r, i) => ({
-  //           id: `api-${i}`,
-  //           title: r.action,
-  //           reason: r.reason,
-  //           source: r.evidence_source,
-  //         }));
-  //         setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
-  //       }
-  //     })
-  //     .catch(() => {});
-  //   fetchCharacter()
-  //     .then((data) => {
-  //       setOverallState(data.character_state.overall_state);
-  //       setRiskChangeSummary(data.risk_change_summary);
-  //     })
-  //     .catch(() => {});
-  // }, [userProfile?.id]);
+  useEffect(() => {
+    const userId = userProfile?.id ?? "guest";
+    fetchRecommendations({ user_id: userId })
+      .then((data) => {
+        setCorrectionStatus(data.correction_status);
+        setEscalationMessage(data.escalation_message);
+        if (data.correction_status !== "ESCALATED") {
+          const mapped: LocalRec[] = data.recommendations.map((r, i) => ({
+            id: `api-${i}`,
+            title: r.action,
+            reason: r.reason,
+            source: r.evidence_source,
+          }));
+          setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
+        }
+      })
+      .catch(() => {});
+    fetchCharacter()
+      .then((data) => {
+        setOverallState(data.character_state.overall_state);
+        setRiskChangeSummary(data.risk_change_summary);
+      })
+      .catch(() => {});
+  }, [userProfile?.id]);
 
   /* ── 걷기 미션 자동 증가 ── */
   useEffect(() => {
@@ -339,12 +380,17 @@ export function HomeScreen() {
   /* ═══════════════════════════════════════════════════════════
      렌더
   ══════════════════════════════════════════════════════════ */
-  const heroBg = overallState ? CHARACTER_THEME[overallState].bgColor : "#F9FFEF";
+  const heroBg = overallState
+    ? CHARACTER_THEME[overallState].bgColor
+    : "#F9FFEF";
 
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ backgroundColor: heroBg, transition: "background-color 0.5s ease" }}
+      style={{
+        backgroundColor: heroBg,
+        transition: "background-color 0.5s ease",
+      }}
     >
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
@@ -577,12 +623,16 @@ export function HomeScreen() {
             <div
               className="size-9 rounded-full flex items-center justify-center shrink-0"
               style={{
-                backgroundColor: riskChangeSummary.improved ? "#D5F5E3" : "#FADBD8",
+                backgroundColor: riskChangeSummary.improved
+                  ? "#D5F5E3"
+                  : "#FADBD8",
               }}
             >
               <TrendingUp
                 className="size-4"
-                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+                style={{
+                  color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A",
+                }}
                 strokeWidth={2.5}
               />
             </div>
@@ -592,7 +642,9 @@ export function HomeScreen() {
               </p>
               <p
                 className="text-[15px] font-black leading-none"
-                style={{ color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A" }}
+                style={{
+                  color: riskChangeSummary.improved ? "#3E8C28" : "#C0305A",
+                }}
               >
                 {riskChangeSummary.message}{" "}
                 <span className="text-[13px]">
@@ -787,146 +839,187 @@ export function HomeScreen() {
             🧪 테스트 패널 (개발용)
         ══════════════════════════════════════ */}
         <div>
-        <button
-          onClick={() => setShowTestPanel((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-[12px] font-bold text-[#7A7A7A] bg-[#F0F0F0] hover:bg-[#E4E4E4] transition-colors"
-        >
-          <span>🧪 테스트 패널 (개발용)</span>
-          <span className="text-[10px]">{showTestPanel ? "▲ 접기" : "▼ 펼치기"}</span>
-        </button>
+          <button
+            onClick={() => setShowTestPanel((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-[12px] font-bold text-[#7A7A7A] bg-[#F0F0F0] hover:bg-[#E4E4E4] transition-colors"
+          >
+            <span>🧪 테스트 패널 (개발용)</span>
+            <span className="text-[10px]">
+              {showTestPanel ? "▲ 접기" : "▼ 펼치기"}
+            </span>
+          </button>
 
-        {showTestPanel && (
-          <div className="mt-2 rounded-2xl border border-[#E0E0E0] bg-white overflow-hidden divide-y divide-[#F0F0F0]">
-
-            {/* ── overall_state ── */}
-            <div className="p-4">
-              <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
-                overall_state — 캐릭터 배경색
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {OVERALL_STATE_OPTIONS.map(({ value, emoji, label }) => {
-                  const theme = CHARACTER_THEME[value];
-                  const isActive = overallState === value;
-                  return (
-                    <button
-                      key={value}
-                      onClick={() => setOverallState(value)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold transition-all"
-                      style={{
-                        backgroundColor: isActive ? theme.bgColor : "#F5F5F5",
-                        border: isActive ? `2px solid #3E8C28` : "2px solid transparent",
-                        color: isActive ? "#1A2E1C" : "#7A7A7A",
-                      }}
-                    >
-                      <span>{emoji}</span>
-                      <span>{label}</span>
-                      <span
-                        className="size-3 rounded-full ml-0.5 shrink-0"
-                        style={{ backgroundColor: theme.bgColor, border: "1px solid #ccc" }}
-                      />
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setOverallState(null)}
-                  className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
-                >
-                  초기화
-                </button>
-              </div>
-
-              {/* 현재 배경색 미리보기 */}
-              {overallState && (
-                <div
-                  className="mt-3 rounded-xl px-3 py-2 flex items-center gap-2"
-                  style={{ backgroundColor: CHARACTER_THEME[overallState].bgColor }}
-                >
-                  <span className="text-[11px] font-bold text-[#5A5A5A]">
-                    현재 배경색 →
-                  </span>
-                  <span className="text-[11px] font-mono text-[#3C3C3C]">
-                    {CHARACTER_THEME[overallState].bgColor}
-                  </span>
-                  <span className="text-[11px] font-bold text-[#3C3C3C]">
-                    ({CHARACTER_THEME[overallState].label})
-                  </span>
+          {showTestPanel && (
+            <div className="mt-2 rounded-2xl border border-[#E0E0E0] bg-white overflow-hidden divide-y divide-[#F0F0F0]">
+              {/* ── overall_state ── */}
+              <div className="p-4">
+                <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
+                  overall_state — 캐릭터 배경색
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {OVERALL_STATE_OPTIONS.map(({ value, emoji, label }) => {
+                    const theme = CHARACTER_THEME[value];
+                    const isActive = overallState === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => setOverallState(value)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold transition-all"
+                        style={{
+                          backgroundColor: isActive ? theme.bgColor : "#F5F5F5",
+                          border: isActive
+                            ? `2px solid #3E8C28`
+                            : "2px solid transparent",
+                          color: isActive ? "#1A2E1C" : "#7A7A7A",
+                        }}
+                      >
+                        <span>{emoji}</span>
+                        <span>{label}</span>
+                        <span
+                          className="size-3 rounded-full ml-0.5 shrink-0"
+                          style={{
+                            backgroundColor: theme.bgColor,
+                            border: "1px solid #ccc",
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setOverallState(null)}
+                    className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
+                  >
+                    초기화
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* ── risk_change_summary ── */}
-            <div className="p-4">
-              <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
-                risk_change_summary — 위험도 변화 & 캐릭터 대사
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {TEST_RISK_SCENARIOS.map(({ label, data }) => {
-                  const isActive =
-                    riskChangeSummary?.message === data.message &&
-                    riskChangeSummary?.improved === data.improved;
-                  return (
-                    <button
-                      key={label}
-                      onClick={() => setRiskChangeSummary(data)}
-                      className="px-3 py-2 rounded-xl text-[12px] font-bold transition-all border-2"
-                      style={{
-                        backgroundColor: isActive
-                          ? data.improved ? "#E8F9D6" : "#FFE4ED"
-                          : "#F5F5F5",
-                        borderColor: isActive
-                          ? data.improved ? "#3E8C28" : "#C0305A"
-                          : "transparent",
-                        color: isActive
-                          ? data.improved ? "#2A6020" : "#C0305A"
-                          : "#7A7A7A",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setRiskChangeSummary(null)}
-                  className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
-                >
-                  null (숨김)
-                </button>
-              </div>
-
-              {/* 캐릭터 대사 미리보기 */}
-              {riskChangeSummary && (
-                <div
-                  className="mt-3 rounded-xl px-4 py-3 border"
-                  style={{
-                    backgroundColor: riskChangeSummary.improved ? "#F0FDF4" : "#FFF0F0",
-                    borderColor: riskChangeSummary.improved ? "#CBF891" : "#F09BB0",
-                  }}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.06em] mb-1.5"
-                    style={{ color: riskChangeSummary.improved ? "#2A6020" : "#C0305A" }}>
-                    캐릭터 대사 미리보기
-                  </p>
-                  <p className="text-[13px] font-bold leading-relaxed"
-                    style={{ color: riskChangeSummary.improved ? "#1A4020" : "#8B1A1A" }}>
-                    "{getCharacterMessage(riskChangeSummary)}"
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 pt-2 border-t"
-                    style={{ borderColor: riskChangeSummary.improved ? "#CBF891" : "#F09BB0" }}>
-                    <span className="text-[11px] text-[#7A7A7A]">
-                      변화량: <b>{riskChangeSummary.improved ? "▼" : "▲"}{riskChangeSummary.change}%</b>
+                {/* 현재 배경색 미리보기 */}
+                {overallState && (
+                  <div
+                    className="mt-3 rounded-xl px-3 py-2 flex items-center gap-2"
+                    style={{
+                      backgroundColor: CHARACTER_THEME[overallState].bgColor,
+                    }}
+                  >
+                    <span className="text-[11px] font-bold text-[#5A5A5A]">
+                      현재 배경색 →
                     </span>
-                    <span className="text-[11px] text-[#7A7A7A]">
-                      {riskChangeSummary.previous_probability}% → {riskChangeSummary.current_probability}%
+                    <span className="text-[11px] font-mono text-[#3C3C3C]">
+                      {CHARACTER_THEME[overallState].bgColor}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#3C3C3C]">
+                      ({CHARACTER_THEME[overallState].label})
                     </span>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-          </div>
-        )}
+              {/* ── risk_change_summary ── */}
+              <div className="p-4">
+                <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em] mb-3">
+                  risk_change_summary — 위험도 변화 & 캐릭터 대사
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {TEST_RISK_SCENARIOS.map(({ label, data }) => {
+                    const isActive =
+                      riskChangeSummary?.message === data.message &&
+                      riskChangeSummary?.improved === data.improved;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => setRiskChangeSummary(data)}
+                        className="px-3 py-2 rounded-xl text-[12px] font-bold transition-all border-2"
+                        style={{
+                          backgroundColor: isActive
+                            ? data.improved
+                              ? "#E8F9D6"
+                              : "#FFE4ED"
+                            : "#F5F5F5",
+                          borderColor: isActive
+                            ? data.improved
+                              ? "#3E8C28"
+                              : "#C0305A"
+                            : "transparent",
+                          color: isActive
+                            ? data.improved
+                              ? "#2A6020"
+                              : "#C0305A"
+                            : "#7A7A7A",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setRiskChangeSummary(null)}
+                    className="px-3 py-2 rounded-xl text-[12px] font-bold text-[#9B9B9B] bg-[#F5F5F5] border-2 border-transparent hover:bg-[#EBEBEB] transition-colors"
+                  >
+                    null (숨김)
+                  </button>
+                </div>
+
+                {/* 캐릭터 대사 미리보기 */}
+                {riskChangeSummary && (
+                  <div
+                    className="mt-3 rounded-xl px-4 py-3 border"
+                    style={{
+                      backgroundColor: riskChangeSummary.improved
+                        ? "#F0FDF4"
+                        : "#FFF0F0",
+                      borderColor: riskChangeSummary.improved
+                        ? "#CBF891"
+                        : "#F09BB0",
+                    }}
+                  >
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-[0.06em] mb-1.5"
+                      style={{
+                        color: riskChangeSummary.improved
+                          ? "#2A6020"
+                          : "#C0305A",
+                      }}
+                    >
+                      캐릭터 대사 미리보기
+                    </p>
+                    <p
+                      className="text-[13px] font-bold leading-relaxed"
+                      style={{
+                        color: riskChangeSummary.improved
+                          ? "#1A4020"
+                          : "#8B1A1A",
+                      }}
+                    >
+                      "{getCharacterMessage(riskChangeSummary)}"
+                    </p>
+                    <div
+                      className="flex items-center gap-3 mt-2 pt-2 border-t"
+                      style={{
+                        borderColor: riskChangeSummary.improved
+                          ? "#CBF891"
+                          : "#F09BB0",
+                      }}
+                    >
+                      <span className="text-[11px] text-[#7A7A7A]">
+                        변화량:{" "}
+                        <b>
+                          {riskChangeSummary.improved ? "▼" : "▲"}
+                          {riskChangeSummary.change}%
+                        </b>
+                      </span>
+                      <span className="text-[11px] text-[#7A7A7A]">
+                        {riskChangeSummary.previous_probability}% →{" "}
+                        {riskChangeSummary.current_probability}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>{/* flex-1 scroll area end */}
+      </div>
+      {/* flex-1 scroll area end */}
 
       {/* ── 하단 내비게이션 ── */}
       <BottomNav />
