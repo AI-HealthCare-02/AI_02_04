@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { setAuthToken } from "@/lib/api/client";
 import { SplashScreen } from "@/components/screens/splash-screen";
 import { LoginScreen } from "@/components/screens/login-screen";
 import { OnboardingScreen } from "@/components/screens/onboarding-screen";
@@ -19,10 +20,11 @@ import { DailyLogScreen } from "@/components/screens/daily-log-screen";
 import { DataSyncScreen } from "@/components/screens/data-sync-screen";
 import { NotificationSettingsScreen } from "@/components/screens/notification-settings-screen";
 import { EditHealthInfoScreen } from "@/components/screens/edit-health-info-screen";
+import { PasswordResetScreen } from "@/components/screens/password-reset-screen";
 import { Toaster } from "@/components/ui/toaster";
 
 export default function App() {
-  const { currentScreen, resetApp } = useAppStore();
+  const { currentScreen, resetApp, accessToken } = useAppStore();
   const [isMounted, setIsMounted] = useState(false);
 
   // 브라우저 자동 스크롤 복원 비활성화 (최초 1회)
@@ -39,7 +41,9 @@ export default function App() {
     document.body.scrollTop = 0;
   }, [currentScreen]);
 
+  // 저장된 토큰을 API 클라이언트에 복원
   useEffect(() => {
+    if (accessToken) setAuthToken(accessToken);
     setIsMounted(true);
   }, []);
 
@@ -86,6 +90,7 @@ export default function App() {
           <NotificationSettingsScreen />
         )}
         {currentScreen === "edit-health-info" && <EditHealthInfoScreen />}
+        {currentScreen === "password-reset" && <PasswordResetScreen />}
       </div>
 
       <Toaster />
