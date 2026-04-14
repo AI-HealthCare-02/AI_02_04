@@ -53,7 +53,9 @@ export function LoginScreen() {
       setIsAuthenticated(true);
       setScreen("home");
     } catch (err: any) {
-      setEmailError(err?.message ?? "이메일 또는 비밀번호가 일치하지 않습니다.");
+      setEmailError(
+        err?.message ?? "이메일 또는 비밀번호가 일치하지 않습니다.",
+      );
     } finally {
       setLoginLoading(false);
     }
@@ -65,7 +67,7 @@ export function LoginScreen() {
     setKakaoError("");
     try {
       const info = await kakaoLogin();
-      const kakaoName  = info.kakao_account?.profile?.nickname ?? "";
+      const kakaoName = info.kakao_account?.profile?.nickname ?? "";
       const kakaoEmail = info.kakao_account?.email ?? "";
       console.info("[Kakao] 로그인 성공:", kakaoName, kakaoEmail);
 
@@ -186,13 +188,29 @@ export function LoginScreen() {
         >
           {loginLoading ? (
             <div className="flex gap-1">
-              {[0,1,2].map((i) => (
-                <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="size-1.5 rounded-full bg-white animate-bounce"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
               ))}
             </div>
           ) : (
-            <><LogIn className="size-4 mr-2" />로그인</>
+            <>
+              <LogIn className="size-4 mr-2" />
+              로그인
+            </>
           )}
+        </Button>
+
+        {/* 회원가입 */}
+        <Button
+          onClick={() => setScreen("health-info")}
+          variant="outline"
+          className="w-full h-13 text-[16px] font-bold rounded-2xl bg-card border-1 border-border text-foreground hover:bg-muted transition-colors"
+        >
+          회원가입
         </Button>
 
         {/* 자동 로그인 */}
@@ -206,23 +224,6 @@ export function LoginScreen() {
             </p>
           </div>
           <Switch checked={autoLogin} onCheckedChange={setAutoLogin} />
-        </div>
-
-        {/* 비밀번호 찾기 | 회원가입 */}
-        <div className="flex items-center justify-center gap-1 py-0.5">
-          <button
-            className="px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setScreen("password-reset")}
-          >
-            비밀번호 찾기
-          </button>
-          <span className="text-border text-[13px] select-none">|</span>
-          <button
-            className="px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setScreen("health-info")}
-          >
-            회원가입
-          </button>
         </div>
 
         {/* 소셜 로그인 구분선 */}

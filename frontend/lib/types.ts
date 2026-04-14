@@ -131,5 +131,4 @@ export type AppScreen =
   | "data-sync"
   | "notification-settings"
   | "mypage"
-  | "edit-health-info"
-  | "password-reset";
+  | "edit-health-info";

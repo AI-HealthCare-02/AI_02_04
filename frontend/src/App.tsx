@@ -20,7 +20,6 @@ import { DailyLogScreen } from "@/components/screens/daily-log-screen";
 import { DataSyncScreen } from "@/components/screens/data-sync-screen";
 import { NotificationSettingsScreen } from "@/components/screens/notification-settings-screen";
 import { EditHealthInfoScreen } from "@/components/screens/edit-health-info-screen";
-import { PasswordResetScreen } from "@/components/screens/password-reset-screen";
 import { Toaster } from "@/components/ui/toaster";
 
 export default function App() {
@@ -90,7 +89,6 @@ export default function App() {
           <NotificationSettingsScreen />
         )}
         {currentScreen === "edit-health-info" && <EditHealthInfoScreen />}
-        {currentScreen === "password-reset" && <PasswordResetScreen />}
       </div>
 
       <Toaster />
