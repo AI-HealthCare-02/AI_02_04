@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Character } from "@/components/character";
 import { kakaoLogin } from "@/lib/kakao";
+import { loginUser } from "@/lib/api/auth";
+import { setAuthToken } from "@/lib/api/client";
 
 /* ── 카카오 로고 SVG ─────────────────────────────────────── */
 function KakaoLogo({ className }: { className?: string }) {
@@ -23,6 +25,7 @@ export function LoginScreen() {
     setScreen,
     setIsAuthenticated,
     setKakaoProfile,
+    setTokens,
     autoLogin,
     setAutoLogin,
   } = useAppStore();
@@ -31,18 +34,28 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
   const [kakaoLoading, setKakaoLoading] = useState(false);
   const [kakaoError, setKakaoError] = useState("");
 
   const isReturningUser = !!(userProfile && character);
 
   /* ── 이메일 로그인 ── */
-  const handleEmailLogin = () => {
-    if (userProfile && email === userProfile.email && password.length >= 6) {
+  const handleEmailLogin = async () => {
+    if (!email || !password) return;
+    setLoginLoading(true);
+    setEmailError("");
+    try {
+      const res = await loginUser(email, password);
+      const { access_token, refresh_token } = res.data;
+      setAuthToken(access_token);
+      setTokens(access_token, refresh_token);
       setIsAuthenticated(true);
       setScreen("home");
-    } else {
-      setEmailError("이메일 또는 비밀번호가 일치하지 않습니다.");
+    } catch (err: any) {
+      setEmailError(err?.message ?? "이메일 또는 비밀번호가 일치하지 않습니다.");
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -168,11 +181,18 @@ export function LoginScreen() {
         {/* 로그인 버튼 */}
         <Button
           onClick={handleEmailLogin}
-          disabled={!email || !password}
+          disabled={!email || !password || loginLoading}
           className="w-full h-13 text-[16px] font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 mt-1"
         >
-          <LogIn className="size-4 mr-2" />
-          로그인
+          {loginLoading ? (
+            <div className="flex gap-1">
+              {[0,1,2].map((i) => (
+                <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+              ))}
+            </div>
+          ) : (
+            <><LogIn className="size-4 mr-2" />로그인</>
+          )}
         </Button>
 
         {/* 자동 로그인 */}
@@ -192,9 +212,7 @@ export function LoginScreen() {
         <div className="flex items-center justify-center gap-1 py-0.5">
           <button
             className="px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => {
-              /* TODO: 비밀번호 찾기 */
-            }}
+            onClick={() => setScreen("password-reset")}
           >
             비밀번호 찾기
           </button>
