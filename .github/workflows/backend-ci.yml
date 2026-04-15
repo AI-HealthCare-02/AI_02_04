@@ -5,10 +5,12 @@ on:
     branches: [develop, main]
     paths:
       - "backend/**"
+      - ".github/**"
   pull_request:
     branches: [develop, main]
     paths:
       - "backend/**"
+      - ".github/**"
 
 jobs:
   check:
