@@ -21,6 +21,10 @@ interface AppState {
   setAutoLogin: (auto: boolean) => void;
   logout: () => void;
 
+  accessToken: string;
+  refreshToken: string;
+  setTokens: (access: string, refresh: string) => void;
+
   kakaoProfile: {
     id: number;
     email: string;
@@ -547,7 +551,11 @@ export const useAppStore = create<AppState>()(
       setIsAuthenticated: (auth) => set({ isAuthenticated: auth }),
       autoLogin: false,
       setAutoLogin: (auto) => set({ autoLogin: auto }),
-      logout: () => set({ isAuthenticated: false, currentScreen: "login" }),
+      logout: () => set({ isAuthenticated: false, accessToken: "", refreshToken: "", currentScreen: "login" }),
+
+      accessToken: "",
+      refreshToken: "",
+      setTokens: (access, refresh) => set({ accessToken: access, refreshToken: refresh }),
 
       kakaoProfile: null,
       setKakaoProfile: (profile) => set({ kakaoProfile: profile }),
@@ -712,6 +720,8 @@ export const useAppStore = create<AppState>()(
         set({
           currentScreen: "splash",
           isAuthenticated: false,
+          accessToken: "",
+          refreshToken: "",
           autoLogin: false,
           userProfile: null,
           character: null,

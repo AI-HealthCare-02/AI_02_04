@@ -10,5 +10,5 @@ import type { WeeklyReportResponse } from "./types";
  * - "mini"    → 캐릭터 독려 메시지만, 차트 숨김 (기록 2일 이하)
  */
 export async function fetchWeeklyReport(): Promise<WeeklyReportResponse> {
-  return client.get<WeeklyReportResponse>("/report/weekly");
+  return client.get<WeeklyReportResponse>("/dashboard");
 }

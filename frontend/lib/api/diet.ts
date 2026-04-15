@@ -1,14 +1,13 @@
 import { client } from "./client";
-import type {
-  DietAnalyzeResponse,
-  DietManualUpdateRequest,
-} from "./types";
+import type { DietAnalyzeResponse, DietManualUpdateRequest } from "./types";
 
 /**
  * 음식 사진을 업로드하여 식단을 분석합니다.
  * - confidence < 0.7이면 프론트에서 [다시분석] / [직접입력] 버튼을 노출하세요.
  */
-export async function analyzeDiet(imageFile: File): Promise<DietAnalyzeResponse> {
+export async function analyzeDiet(
+  imageFile: File,
+): Promise<DietAnalyzeResponse> {
   const formData = new FormData();
   formData.append("image", imageFile);
 
@@ -18,7 +17,7 @@ export async function analyzeDiet(imageFile: File): Promise<DietAnalyzeResponse>
       method: "POST",
       body: formData,
       // Content-Type은 브라우저가 multipart/form-data로 자동 설정
-    }
+    },
   );
 
   if (!res.ok) {
@@ -35,7 +34,7 @@ export async function analyzeDiet(imageFile: File): Promise<DietAnalyzeResponse>
  */
 export async function updateDietManual(
   dietId: string,
-  data: DietManualUpdateRequest
+  data: DietManualUpdateRequest,
 ): Promise<DietAnalyzeResponse> {
   return client.put<DietAnalyzeResponse>(`/diet/${dietId}/manual`, data);
 }

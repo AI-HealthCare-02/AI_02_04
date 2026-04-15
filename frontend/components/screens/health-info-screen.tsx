@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BackendUserType } from "@/lib/types";
+import { registerUser } from "@/lib/api/auth";
+import { setAuthToken } from "@/lib/api/client";
 
 /* ── 공통 섹션 라벨 ── */
 function SectionLabel({
@@ -103,9 +105,11 @@ function QuestionRow({
 }
 
 export function HealthInfoScreen() {
-  const { setScreen, setUserProfile, kakaoProfile, setKakaoProfile } =
+  const { setScreen, setUserProfile, setTokens, setIsAuthenticated, kakaoProfile, setKakaoProfile } =
     useAppStore();
   const [step, setStep] = useState(1);
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 카카오 로그인 경유 여부
   const isKakao = !!kakaoProfile;
@@ -175,14 +179,36 @@ export function HealthInfoScreen() {
     setEmailMessage("");
   };
 
-  const handleEmailCheck = () => {
+  const [isEmailChecking, setIsEmailChecking] = useState(false);
+
+  const handleEmailCheck = async () => {
     if (!formData.email.includes("@") || !formData.email.includes(".")) {
       setEmailMessage("올바른 이메일 형식을 입력해주세요.");
       setIsEmailChecked(false);
       return;
     }
-    setEmailMessage("사용 가능한 이메일입니다.");
-    setIsEmailChecked(true);
+    setIsEmailChecking(true);
+    setEmailMessage("");
+    try {
+      const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+      const res = await fetch(
+        `${BASE_URL}/auth/check-email?email=${encodeURIComponent(formData.email)}`,
+        {}
+      );
+      const json = await res.json();
+      if (json.data?.available) {
+        setEmailMessage("사용 가능한 이메일입니다.");
+        setIsEmailChecked(true);
+      } else {
+        setEmailMessage("이미 사용 중인 이메일입니다.");
+        setIsEmailChecked(false);
+      }
+    } catch {
+      setEmailMessage("확인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setIsEmailChecked(false);
+    } finally {
+      setIsEmailChecking(false);
+    }
   };
 
   const handleNext = () => {
@@ -194,43 +220,105 @@ export function HealthInfoScreen() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    let initialHealthType: BackendUserType = "pending";
-    if (["1", "2", "unknown"].includes(formData.diabetesStatus)) {
-      initialHealthType =
-        formData.diabetesStatus === "1" ? "diabetic_1" : "diabetic_2";
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    // ── 프론트 필드 → 백엔드 필드 매핑 ──
+    const genderInt = formData.gender === "male" ? 1 : 0;
+
+    // physicalActivity "0-10" / "11-20" / "21-30" → 정수 (중간값)
+    const exerciseFreqMap: Record<string, number> = {
+      "0-10": 5, "11-20": 15, "21-30": 25,
+    };
+    const exerciseFreq = exerciseFreqMap[formData.physicalActivity] ?? null;
+
+    // user_type 결정
+    let userType: "normal" | "risk" | "diabetes" = "normal";
+    let diabetesType: "1type" | "2type" | null = null;
+    if (formData.diabetesStatus === "1") {
+      userType = "diabetes"; diabetesType = "1type";
+    } else if (formData.diabetesStatus === "2") {
+      userType = "diabetes"; diabetesType = "2type";
+    } else if (formData.diabetesStatus === "unknown") {
+      userType = "risk";
     }
 
-    setUserProfile({
-      id: crypto.randomUUID(),
-      email: formData.email,
-      name: formData.name,
-      age: parseInt(formData.age),
-      gender: formData.gender as "male" | "female",
-      height: parseFloat(formData.height),
-      weight: parseFloat(formData.weight),
-      highBp: formData.highBp!,
-      highCholesterol: formData.highCholesterol!,
-      heartDisease: formData.heartDisease!,
-      walkingDifficulty: formData.walkingDifficulty!,
-      generalHealth: formData.generalHealth!,
-      sickDays: formData.sickDays as any,
-      heavyDrinking: formData.heavyDrinking!,
-      physicalActivity: formData.physicalActivity as any,
-      dailyFruit: formData.dailyFruit!,
-      dailyVeggie: formData.dailyVeggie!,
-      smoking: formData.smoking!,
-      diabetesStatus: formData.diabetesStatus as any,
-      healthGoal: "건강한 생활 습관 만들기",
-      healthType: initialHealthType,
-      points: 0,
-      streak: 0,
-      lastActiveDate: new Date(),
-    });
+    // 프론트 스토어용 healthType
+    let initialHealthType: BackendUserType = "pending";
+    if (userType === "diabetes") {
+      initialHealthType = formData.diabetesStatus === "1" ? "diabetic_1" : "diabetic_2";
+    } else if (userType === "risk") {
+      initialHealthType = "at_risk";
+    }
 
-    setKakaoProfile(null); // 가입 완료 후 임시 데이터 정리
-    if (formData.diabetesStatus === "none") setScreen("analysis");
-    else setScreen("permissions");
+    try {
+      const res = await registerUser({
+        email:             formData.email,
+        password:          formData.password || "kakao_no_password",
+        nickname:          formData.name,
+        user_type:         userType,
+        goal:              null,
+        diabetes_type:     diabetesType,
+        gender:            genderInt,
+        age:               parseInt(formData.age),
+        height:            parseFloat(formData.height),
+        weight:            parseFloat(formData.weight),
+        is_hypertension:   formData.highBp!,
+        is_cholesterol:    formData.highCholesterol!,
+        is_heart_disease:  formData.heartDisease!,
+        walking_difficulty:formData.walkingDifficulty!,
+        general_health:    formData.generalHealth!,
+        alcohol_status:    formData.heavyDrinking!,
+        smoke_status:      formData.smoking,
+        exercise_freq:     exerciseFreq,
+        fruit_intake:      formData.dailyFruit,
+        veggie_intake:     formData.dailyVeggie,
+      });
+
+      // 토큰 저장
+      const { access_token, refresh_token } = res.data;
+      setAuthToken(access_token);
+      setTokens(access_token, refresh_token);
+      setIsAuthenticated(true);
+
+      // 로컬 프로필 저장
+      setUserProfile({
+        id: String(res.data.user_id ?? crypto.randomUUID()),
+        email: formData.email,
+        name: formData.name,
+        age: parseInt(formData.age),
+        gender: formData.gender as "male" | "female",
+        height: parseFloat(formData.height),
+        weight: parseFloat(formData.weight),
+        highBp: formData.highBp!,
+        highCholesterol: formData.highCholesterol!,
+        heartDisease: formData.heartDisease!,
+        walkingDifficulty: formData.walkingDifficulty!,
+        generalHealth: formData.generalHealth!,
+        sickDays: formData.sickDays as any,
+        heavyDrinking: formData.heavyDrinking!,
+        physicalActivity: formData.physicalActivity as any,
+        dailyFruit: formData.dailyFruit!,
+        dailyVeggie: formData.dailyVeggie!,
+        smoking: formData.smoking!,
+        diabetesStatus: formData.diabetesStatus as any,
+        healthGoal: "건강한 생활 습관 만들기",
+        healthType: initialHealthType,
+        points: 0,
+        streak: 0,
+        lastActiveDate: new Date(),
+      });
+
+      setKakaoProfile(null);
+      if (formData.diabetesStatus === "none") setScreen("analysis");
+      else setScreen("permissions");
+
+    } catch (err: any) {
+      setSubmitError(err?.message ?? "회원가입에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const yesNoOptions = [
@@ -316,7 +404,7 @@ export function HealthInfoScreen() {
                   {!isKakao && (
                     <button
                       onClick={handleEmailCheck}
-                      disabled={!formData.email || isEmailChecked}
+                      disabled={!formData.email || isEmailChecked || isEmailChecking}
                       className={cn(
                         "h-11 px-3.5 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors",
                         isEmailChecked
@@ -324,14 +412,27 @@ export function HealthInfoScreen() {
                           : "bg-[#87D57B] hover:bg-[#6DC462] text-white disabled:opacity-40",
                       )}
                     >
-                      {isEmailChecked ? "확인 완료" : "중복 확인"}
+                      {isEmailChecking ? (
+                        <div className="flex gap-0.5 px-1">
+                          {[0,1,2].map((i) => (
+                            <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i*150}ms` }} />
+                          ))}
+                        </div>
+                      ) : isEmailChecked ? "확인 완료" : "중복 확인"}
                     </button>
                   )}
                 </div>
                 {emailMessage && (
                   <div className="flex items-center gap-1.5 mt-2">
-                    <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
-                    <p className="text-[12px] font-medium text-[#3E8C28]">
+                    {isEmailChecked ? (
+                      <CheckCircle2 className="size-3.5 text-[#3E8C28] shrink-0" />
+                    ) : (
+                      <AlertCircle className="size-3.5 text-[#C0305A] shrink-0" />
+                    )}
+                    <p className={cn(
+                      "text-[12px] font-medium",
+                      isEmailChecked ? "text-[#3E8C28]" : "text-[#C0305A]"
+                    )}>
                       {emailMessage}
                     </p>
                   </div>
@@ -721,6 +822,12 @@ export function HealthInfoScreen() {
 
       {/* ── 하단 버튼 ── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#FAFAFA] via-[#FAFAFA] to-transparent">
+        {submitError && (
+          <div className="max-w-md mx-auto mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5">
+            <AlertCircle className="size-4 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600">{submitError}</p>
+          </div>
+        )}
         <div className="max-w-md mx-auto flex gap-3">
           {step > 1 && (
             <button
@@ -733,16 +840,27 @@ export function HealthInfoScreen() {
           <button
             onClick={handleNext}
             disabled={
-              step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid
+              isSubmitting ||
+              (step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid)
             }
             className="flex-1 h-14 rounded-2xl bg-[#87D57B] hover:bg-[#6DC462] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 text-[16px] font-bold text-white transition-colors"
           >
-            {step === 3
-              ? formData.diabetesStatus === "none"
-                ? "AI 진단 시작하기"
-                : "완료하고 넘어가기"
-              : "다음 단계로"}
-            <ChevronRight className="size-5" />
+            {isSubmitting ? (
+              <div className="flex gap-1">
+                {[0,1,2].map((i) => (
+                  <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i*150}ms` }} />
+                ))}
+              </div>
+            ) : (
+              <>
+                {step === 3
+                  ? formData.diabetesStatus === "none"
+                    ? "AI 진단 시작하기"
+                    : "완료하고 넘어가기"
+                  : "다음 단계로"}
+                <ChevronRight className="size-5" />
+              </>
+            )}
           </button>
         </div>
       </div>
