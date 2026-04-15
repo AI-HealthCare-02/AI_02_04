@@ -84,7 +84,7 @@ jobs:
       - name: Deploy to ECS
         run: |
           aws ecs update-service \
-            --cluster dangmago-cluster \
+            --cluster dangmago-backend \
             --service dangmago-backend-service-gb8hxei0 \
             --force-new-deployment \
             --region ap-northeast-2
