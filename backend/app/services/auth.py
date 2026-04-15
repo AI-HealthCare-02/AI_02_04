@@ -29,12 +29,12 @@ def create_access_token(user: User) -> str:
     payload = {"sub": str(user.id), "exp": expire, "user_type": user.user_type.value}
 
     if user.user_type.value == UserType.normal:
-        payload["goal"] = user.goal.value if user.goal.value else None
+        payload["goal"] = user.goal.value if user.goal else None #type:ignore
     elif user.user_type.value == UserType.risk:
-        payload["risk_level"] = user.risk_level.value if user.risk_level.value else None
+        payload["risk_level"] = user.risk_level.value if user.risk_level else None#type:ignore
     elif user.user_type.value == UserType.diabetes:
         payload["diabetes_type"] = (
-            user.diabetes_type.value if user.diabetes_type.value else None
+            user.diabetes_type.value if user.diabetes_type else None#type:ignore
         )
 
     return jwt.encode(

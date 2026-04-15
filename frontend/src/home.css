@@ -1,0 +1,384 @@
+/* ================================================================
+   사용법 (홈 화면 hero 컨테이너에 클래스 추가):
+     <div className="retro-scene">
+       <span className="retro-shape rs-square  rc-green  rz-sm  ra-1" style="..." />
+       ...
+       {캐릭터 / 스탯 JSX}
+     </div>
+
+   클래스 네이밍:
+     retro-scene  — 도트 배경 컨테이너
+     retro-shape  — 모든 도형 공통 (absolute, pointer-events-none)
+     rs-*         — 도형 종류  : circle | ring | square | diamond | triangle | dot
+     rc-*         — 색상       : green | blue | yellow | pink | red | white
+     rz-*         — 크기       : xs(6) | sm(12) | md(20) | lg(32) | xl(50)
+     ra-*         — 애니메이션 : 1–6 (다양한 떠다니기 패턴)
+================================================================ */
+
+/* ──────────────────────────────────────────────────────────────
+   1. 배경 컨테이너 — 도트 패턴만 (배경색 없음, 부모 색상 그대로 사용)
+────────────────────────────────────────────────────────────── */
+.retro-scene {
+  position: relative;
+  overflow: hidden;
+
+  /* 도트 배경: 밝은 배경(#F9FFEF) 위에 어두운 점 */
+  background-image: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.07) 1px,
+    transparent 1px
+  );
+  background-size: 14px 14px;
+}
+
+/* 옵션: 초록 테마 (밝은 배경에 사용) */
+.retro-scene-teal {
+  background-color: #0e5c55;
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 12px 12px;
+}
+
+/* 하단 페이드 — 아래 콘텐츠와 자연스럽게 연결 */
+.retro-scene::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, #f9ffef);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   2. 도형 공통 베이스
+────────────────────────────────────────────────────────────── */
+.retro-shape {
+  position: absolute;
+  pointer-events: none;
+  display: block;
+  will-change: transform;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   3. 도형 종류 (rs-*)
+────────────────────────────────────────────────────────────── */
+
+/* 원 */
+.rs-circle {
+  border-radius: 50%;
+}
+
+/* 링 (테두리만) */
+.rs-ring {
+  border-radius: 50%;
+  background: transparent !important;
+  border-width: 2.5px;
+  border-style: solid;
+}
+.rz-xs.rs-ring {
+  border-width: 1.5px;
+}
+.rz-lg.rs-ring {
+  border-width: 3px;
+}
+.rz-xl.rs-ring {
+  border-width: 4px;
+}
+
+/* 정사각형 */
+.rs-square {
+  border-radius: 3px;
+}
+
+/* 다이아몬드 (사각형 45° 회전) */
+.rs-diamond {
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+/* 애니메이션과 병행 사용 시 transform을 유지하도록 애니메이션에서 처리 */
+
+/* 삼각형 */
+.rs-triangle {
+  background: transparent !important;
+  border-left: solid transparent;
+  border-right: solid transparent;
+  border-bottom: solid;
+  border-radius: 0;
+  width: 0 !important;
+  height: 0 !important;
+}
+/* 삼각형 크기 오버라이드 */
+.rz-xs.rs-triangle {
+  border-left-width: 4px;
+  border-right-width: 4px;
+  border-bottom-width: 7px;
+}
+.rz-sm.rs-triangle {
+  border-left-width: 7px;
+  border-right-width: 7px;
+  border-bottom-width: 12px;
+}
+.rz-md.rs-triangle {
+  border-left-width: 11px;
+  border-right-width: 11px;
+  border-bottom-width: 19px;
+}
+.rz-lg.rs-triangle {
+  border-left-width: 17px;
+  border-right-width: 17px;
+  border-bottom-width: 30px;
+}
+
+/* 삼각형 색상 (border-bottom-color 사용) */
+.rs-triangle.rc-green {
+  border-bottom-color: #4dff78;
+}
+.rs-triangle.rc-blue {
+  border-bottom-color: #7ba8ff;
+}
+.rs-triangle.rc-yellow {
+  border-bottom-color: #ffd93d;
+}
+.rs-triangle.rc-pink {
+  border-bottom-color: #ff6baf;
+}
+.rs-triangle.rc-red {
+  border-bottom-color: #ff5b5b;
+}
+.rs-triangle.rc-white {
+  border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 점 (tiny dot) */
+.rs-dot {
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   4. 색상 (rc-*)
+   — rs-triangle은 위에서 border-color로 별도 처리
+────────────────────────────────────────────────────────────── */
+.rc-green {
+  background-color: #64ad75;
+  border-color: #64ad75;
+  filter: drop-shadow(4px 4px 0px #e2c1744e);
+}
+.rc-blue {
+  background-color: #7ba8ff;
+  border-color: #7ba8ff;
+}
+.rc-yellow {
+  background-color: #ffd93d;
+  border-color: #ffd93d;
+  filter: drop-shadow(4px 4px 0px #ffbea2);
+}
+.rc-pink {
+  background-color: #ff6baf;
+  border-color: #ff6baf;
+}
+.rc-red {
+  background-color: #f88080;
+  border-color: #ff5b5b;
+  filter: drop-shadow(4px 4px 0px #71a2a94e);
+}
+.rc-white {
+  background-color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   5. 크기 (rz-*)
+────────────────────────────────────────────────────────────── */
+.rz-xs {
+  width: 6px;
+  height: 6px;
+}
+.rz-sm {
+  width: 12px;
+  height: 12px;
+}
+.rz-md {
+  width: 20px;
+  height: 20px;
+}
+.rz-lg {
+  width: 32px;
+  height: 32px;
+}
+.rz-xl {
+  width: 50px;
+  height: 50px;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   6. 떠다니기 애니메이션 keyframes
+────────────────────────────────────────────────────────────── */
+
+/* 1 — 위아래 천천히 */
+@keyframes retro-float-1 {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(6deg);
+  }
+}
+
+/* 2 — 대각 드리프트 */
+@keyframes retro-float-2 {
+  0%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  40% {
+    transform: translate(10px, -14px) rotate(-10deg);
+  }
+  70% {
+    transform: translate(-6px, -20px) rotate(5deg);
+  }
+}
+
+/* 3 — 작은 원형 궤도 */
+@keyframes retro-float-3 {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  25% {
+    transform: translate(9px, -10px);
+  }
+  50% {
+    transform: translate(0px, -18px);
+  }
+  75% {
+    transform: translate(-9px, -10px);
+  }
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+/* 4 — 회전 + 위아래 (diamond/square 용) */
+@keyframes retro-float-4 {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(45deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(90deg);
+  }
+}
+/* rs-diamond가 이미 45deg 기본이므로 합산 */
+.rs-diamond.ra-4 {
+  animation-name: retro-float-4 !important;
+}
+
+/* 5 — 느린 크게 흔들 */
+@keyframes retro-float-5 {
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  30% {
+    transform: translate(-12px, -22px) scale(0.92);
+  }
+  60% {
+    transform: translate(14px, -10px) scale(1.06);
+  }
+}
+
+/* 6 — 펄스 + 미세 이동 */
+@keyframes retro-float-6 {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.18);
+    opacity: 1;
+  }
+}
+
+/* 다이아몬드 전용 (45도 유지하면서 float) */
+@keyframes retro-float-diamond {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(45deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(52deg);
+  }
+}
+@keyframes retro-float-diamond-2 {
+  0%,
+  100% {
+    transform: translate(0px, 0px) rotate(45deg);
+  }
+  40% {
+    transform: translate(8px, -12px) rotate(35deg);
+  }
+  70% {
+    transform: translate(-5px, -18px) rotate(55deg);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   7. 애니메이션 클래스 (ra-*)
+   — 기본 duration / timing-function은 여기서 정의
+   — 컴포넌트 인라인 style로 animationDelay 덮어쓰기 가능
+────────────────────────────────────────────────────────────── */
+.ra-1 {
+  animation: retro-float-1 3.8s ease-in-out infinite;
+}
+.ra-2 {
+  animation: retro-float-2 4.5s ease-in-out infinite;
+}
+.ra-3 {
+  animation: retro-float-3 5.2s ease-in-out infinite;
+}
+.ra-4 {
+  animation: retro-float-4 3.5s ease-in-out infinite;
+}
+.ra-5 {
+  animation: retro-float-5 6s ease-in-out infinite;
+}
+.ra-6 {
+  animation: retro-float-6 2.8s ease-in-out infinite;
+}
+
+/* 다이아몬드는 별도 keyframe 사용 */
+.rs-diamond.ra-1 {
+  animation: retro-float-diamond 3.8s ease-in-out infinite;
+}
+.rs-diamond.ra-2 {
+  animation: retro-float-diamond-2 4.5s ease-in-out infinite;
+}
+.rs-diamond.ra-3 {
+  animation: retro-float-diamond 5.2s ease-in-out infinite;
+}
+.rs-diamond.ra-5 {
+  animation: retro-float-diamond-2 6s ease-in-out infinite;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   8. hero 씬 안 콘텐츠 z-index 보장
+────────────────────────────────────────────────────────────── */
+.retro-scene > *:not(.retro-shape) {
+  position: relative;
+  z-index: 2;
+}
+
+/* StatChip 배경 반투명 흰색 조정 (dark bg 위에서 가독성) */
+.retro-scene .stat-chip-glass {
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+}

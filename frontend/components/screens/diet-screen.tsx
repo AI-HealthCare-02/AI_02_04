@@ -73,6 +73,17 @@ export function DietScreen() {
   const [selectedEntry, setSelectedEntry] = useState<DietEntry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  /* ── ML API 추가 필드 ── */
+  const [apiExtra, setApiExtra] = useState<{
+    food_name: string;
+    diet_score: number;
+    highlight: "calories" | "protein" | "carbs";
+    health_notes: string[];
+    healthier_alternative: { name: string; reason: string } | null;
+    confidence: number;
+    alternatives: { name: string; confidence: number }[];
+  } | null>(null);
+
   const todayEntries = dietEntries.filter(
     (e) => new Date(e.timestamp).toDateString() === new Date().toDateString(),
   );
@@ -103,6 +114,7 @@ export function DietScreen() {
 
   const handleUpload = () => {
     setAnalysisState("uploading");
+    setApiExtra(null);
     setTimeout(() => {
       setAnalysisState("analyzing");
       setTimeout(() => {
@@ -118,6 +130,18 @@ export function DietScreen() {
           timestamp: new Date(),
         };
         setAnalysisResult(mockResult);
+        setApiExtra({
+          food_name: "비빔밥",
+          diet_score: 80,
+          highlight: "carbs",
+          health_notes: ["나트륨 함량이 800mg으로 다소 높습니다."],
+          healthier_alternative: {
+            name: "메밀국수",
+            reason: "나트륨 60% 감소",
+          },
+          confidence: 0.85,
+          alternatives: [{ name: "돌솥비빔밥", confidence: 0.7 }],
+        });
         setAnalysisState("complete");
       }, 2000);
     }, 1000);
@@ -139,6 +163,15 @@ export function DietScreen() {
         timestamp: new Date(),
       };
       setAnalysisResult(mockResult);
+      setApiExtra({
+        food_name: manualFoodName,
+        diet_score: 75,
+        highlight: "calories",
+        health_notes: [],
+        healthier_alternative: null,
+        confidence: 1.0,
+        alternatives: [],
+      });
       setAnalysisState("complete");
       setManualFoodName("");
     }, 1500);
@@ -197,7 +230,15 @@ export function DietScreen() {
 
   const handleSaveEntry = () => {
     if (analysisResult) {
-      addDietEntry(analysisResult);
+      const entryToSave = {
+        ...analysisResult,
+        ...(apiExtra && {
+          food_name: apiExtra.food_name,
+          health_notes: apiExtra.health_notes,
+          healthier_alternative: apiExtra.healthier_alternative,
+        }),
+      };
+      addDietEntry(entryToSave);
       checkDietMissions({
         calories: analysisResult.calories,
         carbs: analysisResult.carbs,
@@ -208,6 +249,7 @@ export function DietScreen() {
         description: "식단이 성공적으로 기록되었습니다.",
       });
       setAnalysisResult(null);
+      setApiExtra(null);
       setAnalysisState("idle");
     }
   };
@@ -485,6 +527,40 @@ export function DietScreen() {
           />
         </div>
 
+        {/* 건강 노트 */}
+        {selectedEntry.health_notes && selectedEntry.health_notes.length > 0 && (
+          <div className="mx-5 mt-4 rounded-2xl bg-[#FFF9E6] border border-[#FFF383] px-4 py-3 space-y-1.5">
+            <p className="text-[11px] font-bold text-[#8C7010] uppercase tracking-[0.05em] mb-1">
+              건강 노트
+            </p>
+            {selectedEntry.health_notes.map((note, i) => (
+              <p key={i} className="text-[13px] text-[#8C7010] leading-snug">
+                • {note}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* 대안 음식 */}
+        {selectedEntry.healthier_alternative && (
+          <div className="mx-5 mt-3 mb-2 rounded-2xl bg-[#F0FDF4] border border-[#CBF891] px-4 py-3 flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-[#CBF891] flex items-center justify-center shrink-0">
+              <Utensils className="size-4 text-[#3E8C28]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[11px] font-bold text-[#2A6020] uppercase tracking-[0.04em] mb-0.5">
+                대신 이걸 드셔보세요
+              </p>
+              <p className="text-[13px] font-bold text-[#3E8C28]">
+                {selectedEntry.healthier_alternative.name}
+                <span className="text-[12px] font-medium text-[#7A7A7A] ml-1.5">
+                  — {selectedEntry.healthier_alternative.reason}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 하단 고정 버튼 */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-black/[0.06] flex gap-3 z-50">
           <Button
@@ -696,7 +772,7 @@ export function DietScreen() {
               </Button>
             </div>
             <button
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-[#3E8C28] bg-[#E8F9D6] hover:bg-[#CBF891] px-4 py-2.5 rounded-2xl transition-colors"
+              className="flex justify-center items-center w-full gap-1.5 text-[13px] font-semibold text-[#3E8C28] bg-[#E8F9D6] hover:bg-[#CBF891] px-4 py-2.5 rounded-2xl transition-colors"
               onClick={() => setShowManualModal(true)}
             >
               <PencilLine className="size-4" />
@@ -755,9 +831,17 @@ export function DietScreen() {
                     style={{ color: NUTRIENT_COLORS.carbs.icon }}
                   />
                 </div>
-                <p className="text-[15px] font-bold text-[#3C3C3C]">
-                  분석 결과
-                </p>
+                <div>
+                  <p className="text-[15px] font-bold text-[#3C3C3C]">
+                    {apiExtra?.food_name ?? "분석 결과"}
+                  </p>
+                  {apiExtra && apiExtra.confidence < 0.7 && (
+                    <p className="text-[11px] text-[#C0305A] font-semibold">
+                      인식률 {Math.round(apiExtra.confidence * 100)}% — 확인
+                      필요
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 className="size-7 rounded-full bg-[#F0F0F0] hover:bg-[#E4E4E4] flex items-center justify-center text-[#9B9B9B] transition-colors"
@@ -778,60 +862,182 @@ export function DietScreen() {
               <Utensils className="size-12 text-[#CBF891]" />
             </div>
 
-            {/* 영양 수치 그리드 */}
+            {/* 영양 수치 그리드 — highlight 필드에 해당하는 칩 강조 */}
             <div className="grid grid-cols-2 gap-2.5 mx-5 mt-4">
-              {[
-                {
-                  label: "칼로리",
-                  value: `${analysisResult.calories}`,
-                  unit: "kcal",
-                  ...NUTRIENT_COLORS.calories,
-                },
-                {
-                  label: "탄수화물",
-                  value: `${analysisResult.carbs}`,
-                  unit: "g",
-                  ...NUTRIENT_COLORS.carbs,
-                },
-                {
-                  label: "단백질",
-                  value: `${analysisResult.protein}`,
-                  unit: "g",
-                  ...NUTRIENT_COLORS.protein,
-                },
-                {
-                  label: "지방",
-                  value: `${analysisResult.fat}`,
-                  unit: "g",
-                  ...NUTRIENT_COLORS.fat,
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl py-4 flex flex-col items-center gap-0.5 border border-white"
-                  style={{ backgroundColor: item.bg }}
-                >
-                  <p
-                    className="text-[22px] font-black leading-none"
-                    style={{ color: item.icon }}
+              {(
+                [
+                  {
+                    key: "calories",
+                    label: "칼로리",
+                    value: `${analysisResult.calories}`,
+                    unit: "kcal",
+                    ...NUTRIENT_COLORS.calories,
+                  },
+                  {
+                    key: "carbs",
+                    label: "탄수화물",
+                    value: `${analysisResult.carbs}`,
+                    unit: "g",
+                    ...NUTRIENT_COLORS.carbs,
+                  },
+                  {
+                    key: "protein",
+                    label: "단백질",
+                    value: `${analysisResult.protein}`,
+                    unit: "g",
+                    ...NUTRIENT_COLORS.protein,
+                  },
+                  {
+                    key: "fat",
+                    label: "지방",
+                    value: `${analysisResult.fat}`,
+                    unit: "g",
+                    ...NUTRIENT_COLORS.fat,
+                  },
+                ] as const
+              ).map((item) => {
+                const isHighlighted = apiExtra?.highlight === item.key;
+                return (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl py-4 flex flex-col items-center justify-center gap-0.5 transition-all"
+                    style={{
+                      backgroundColor: item.bg,
+                      border: isHighlighted
+                        ? `2px solid ${item.icon}`
+                        : "2px solid transparent",
+                      boxShadow: isHighlighted
+                        ? `0 0 0 3px ${item.icon}22`
+                        : undefined,
+                    }}
                   >
-                    {item.value}
-                    <span className="text-[13px] font-bold ml-0.5">
-                      {item.unit}
-                    </span>
-                  </p>
-                  <p
-                    className="text-[11px] font-semibold mt-1"
-                    style={{ color: item.text }}
-                  >
-                    {item.label}
-                  </p>
-                </div>
-              ))}
+                    {isHighlighted && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full mb-1 uppercase tracking-wider"
+                        style={{ backgroundColor: item.icon, color: "#fff" }}
+                      >
+                        중요
+                      </span>
+                    )}
+                    <p
+                      className="text-[22px] font-black leading-none"
+                      style={{ color: item.icon }}
+                    >
+                      {item.value}
+                      <span className="text-[13px] font-bold ml-0.5">
+                        {item.unit}
+                      </span>
+                    </p>
+                    <p
+                      className="text-[11px] font-semibold mt-1"
+                      style={{ color: item.text }}
+                    >
+                      {item.label}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* 버튼 영역 */}
+            {/* health_notes */}
+            {apiExtra && apiExtra.health_notes.length > 0 && (
+              <div className="mx-5 mt-3 rounded-2xl bg-[#FFF9E6] border border-[#FFF383] px-4 py-3 space-y-1">
+                {apiExtra.health_notes.map((note, i) => (
+                  <p
+                    key={i}
+                    className="text-[12px] text-[#8C7010] leading-snug"
+                  >
+                    • {note}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* 대안 음식 */}
+            {apiExtra?.healthier_alternative && (
+              <div className="mx-5 mt-3 rounded-2xl bg-[#F0FDF4] border border-[#CBF891] px-4 py-3 flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-[#CBF891] flex items-center justify-center shrink-0">
+                  <Utensils className="size-4 text-[#3E8C28]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[11px] font-bold text-[#2A6020] uppercase tracking-[0.04em] mb-0.5">
+                    대신 이걸 드셔보세요
+                  </p>
+                  <p className="text-[13px] font-bold text-[#3E8C28]">
+                    {apiExtra.healthier_alternative.name}
+                    <span className="text-[12px] font-medium text-[#7A7A7A] ml-1.5">
+                      — {apiExtra.healthier_alternative.reason}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* alternatives — "혹시 이 음식인가요?" (confidence < 0.7일 때만) */}
+            {apiExtra &&
+              apiExtra.confidence < 0.7 &&
+              apiExtra.alternatives.length > 0 && (
+                <div className="mx-5 mt-3 rounded-2xl bg-[#F5F5FF] border border-[#D0D0F0] px-4 py-3">
+                  <p className="text-[12px] font-bold text-[#5A5AAA] mb-2">
+                    혹시 이 음식인가요?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {apiExtra.alternatives.map((alt) => (
+                      <button
+                        key={alt.name}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold bg-white border border-[#D0D0F0] text-[#5A5AAA] hover:bg-[#EEEEFF] transition-colors"
+                        onClick={() => {
+                          setApiExtra((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  food_name: alt.name,
+                                  confidence: alt.confidence,
+                                  alternatives: [],
+                                }
+                              : prev,
+                          );
+                        }}
+                      >
+                        {alt.name}
+                        <span className="text-[10px] text-[#9B9BE0] font-medium">
+                          {Math.round(alt.confidence * 100)}%
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {/* 버튼 영역: confidence < 0.7이면 재분석/직접입력 우선 표시 */}
             <div className="px-5 pt-4 pb-5 space-y-2.5 mt-1">
+              {apiExtra && apiExtra.confidence < 0.7 && (
+                <div className="rounded-2xl bg-[#FFF0F0] border border-[#F09BB0] px-4 py-3 mb-1">
+                  <p className="text-[12px] font-bold text-[#C0305A] mb-2">
+                    음식을 잘못 인식했나요?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 rounded-xl text-[13px] font-bold border-[#F09BB0] text-[#C0305A] hover:bg-[#FFE4ED]"
+                      onClick={() => {
+                        setAnalysisState("idle");
+                        setAnalysisResult(null);
+                        setApiExtra(null);
+                      }}
+                    >
+                      다시 분석하기
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 rounded-xl text-[13px] font-bold border-[#CBF891] text-[#3E8C28] hover:bg-[#F9FFEF]"
+                      onClick={() => setShowManualModal(true)}
+                    >
+                      직접 입력
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2.5">
                 <Button
                   variant="outline"
@@ -839,6 +1045,7 @@ export function DietScreen() {
                   onClick={() => {
                     setAnalysisState("idle");
                     setAnalysisResult(null);
+                    setApiExtra(null);
                   }}
                 >
                   다시 분석

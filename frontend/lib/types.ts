@@ -81,6 +81,10 @@ export interface DietEntry {
   fat: number;
   feedback: string;
   timestamp: Date;
+  /** ML API 응답 필드 — 분석 시에만 존재 */
+  food_name?: string;
+  health_notes?: string[];
+  healthier_alternative?: { name: string; reason: string } | null;
 }
 
 export interface ShopItem {
