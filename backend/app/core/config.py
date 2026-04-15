@@ -2,12 +2,11 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 
-
 class Settings(BaseSettings):
     APP_ENV: str = "development"
 
     # DB
-    DATABASE_URL: str= ""
+    DATABASE_URL: str = ""
 
     # JWT
     JWT_SECRET_KEY: str = ""
@@ -27,11 +26,14 @@ class Settings(BaseSettings):
     # ML
     ML_MODEL_PATH: str = "/ml/saved_models"
 
+    KAKAO_REST_API_KEY: str = ""
+    KAKAO_REDIRECT_URI: str = ""
+    KAKAO_CLIENT_SECRET: str = ""
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
-        extra = "ignore"  
+        extra = "ignore"
 
 
 @lru_cache()
