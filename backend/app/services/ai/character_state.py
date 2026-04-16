@@ -100,23 +100,14 @@ class CharacterStateCalculator:
     }
 
     def calculate_state(
-        self,
-        user_context: dict,
-        recommendations: list = None,
-        meal_analysis: dict = None,
-        failure_patterns: list = None,
+            self,
+            user_context: dict,
+            recommendations: list = None,
+            meal_analysis: dict = None,
+            failure_patterns: list = None,
     ) -> dict:
         """
         모든 데이터를 종합하여 캐릭터 상태 JSON을 생성한다.
-
-        Args:
-            user_context: 사용자 건강 데이터 (recent_7d_data 포함)
-            recommendations: AI 추천 결과 리스트
-            meal_analysis: 최근 식단 분석 결과
-            failure_patterns: 실패 패턴 분석 결과
-
-        Returns:
-            캐릭터 상태 JSON (프론트에서 바로 사용 가능)
         """
         # ── 5축 계산 ──
         energy = self._calc_energy(user_context)
@@ -125,12 +116,18 @@ class CharacterStateCalculator:
         recovery = self._calc_recovery(user_context, failure_patterns)
         growth = self._calc_growth(user_context)
 
+        # ── CatBoost 위험도 변화 반영 ──
+        risk_bonus = self._calc_risk_bonus(user_context)
+        if risk_bonus != 0:
+            mood = max(0, min(100, mood + risk_bonus))
+            energy = max(0, min(100, energy + risk_bonus))
+            growth = max(0, min(100, growth + risk_bonus))
+
         # ── 종합 상태 판정 ──
         avg_score = (energy + mood + stability + recovery + growth) / 5
         overall_state = self._determine_state(avg_score)
 
         # ── 대사 생성 ──
-        # 실패 패턴을 dict 리스트로 변환 (다양한 입력 형태 대응)
         pattern_dicts = []
         if failure_patterns:
             for fp in failure_patterns:
@@ -139,7 +136,12 @@ class CharacterStateCalculator:
                 elif hasattr(fp, 'detail'):
                     pattern_dicts.append({"detail": fp.detail, "pattern_type": fp.pattern_type})
 
-        message = self._pick_message(overall_state, pattern_dicts)
+        # 위험도 변화에 따른 특별 대사
+        risk_message = self._get_risk_change_message(user_context)
+        if risk_message:
+            message = risk_message
+        else:
+            message = self._pick_message(overall_state, pattern_dicts)
 
         state = CharacterState(
             energy=energy,
@@ -162,7 +164,67 @@ class CharacterStateCalculator:
                 "message": state.message,
                 "avg_score": round(avg_score, 1),
             },
+            "risk_change_summary": self._get_risk_summary(user_context),
             "generated_at": datetime.utcnow().isoformat(),
+        }
+
+    def _calc_risk_bonus(self, user_context: dict) -> int:
+        """CatBoost 위험도 변화에 따른 캐릭터 보너스/페널티."""
+        prev_prob = user_context.get("previous_risk_probability")
+        curr_prob = user_context.get("current_risk_probability")
+
+        if prev_prob is None or curr_prob is None:
+            return 0
+
+        diff = prev_prob - curr_prob  # 양수 = 개선
+
+        if diff >= 0.15:
+            return 15  # 큰 개선
+        elif diff >= 0.05:
+            return 8  # 소폭 개선
+        elif diff <= -0.15:
+            return -10  # 큰 악화
+        elif diff <= -0.05:
+            return -5  # 소폭 악화
+        return 0
+
+    def _get_risk_change_message(self, user_context: dict) -> str:
+        """위험도 변화에 따른 캐릭터 특별 대사."""
+        prev_prob = user_context.get("previous_risk_probability")
+        curr_prob = user_context.get("current_risk_probability")
+
+        if prev_prob is None or curr_prob is None:
+            return ""
+
+        diff = prev_prob - curr_prob
+        prev_pct = int(prev_prob * 100)
+        curr_pct = int(curr_prob * 100)
+
+        if diff >= 0.15:
+            return f"와! 위험도가 {prev_pct}%에서 {curr_pct}%로 떨어졌어! 정말 대단해! 계속 이렇게 하자!"
+        elif diff >= 0.05:
+            return f"위험도가 {prev_pct}%에서 {curr_pct}%로 줄었어! 노력하고 있구나, 자랑스러워!"
+        elif diff <= -0.15:
+            return f"위험도가 {prev_pct}%에서 {curr_pct}%로 올랐어... 걱정되지만, 같이 다시 해보자!"
+        elif diff <= -0.05:
+            return f"위험도가 조금 올랐어({prev_pct}%→{curr_pct}%). 괜찮아, 이번 주 천천히 시작하자."
+        return ""
+
+    def _get_risk_summary(self, user_context: dict) -> dict:
+        """위험도 변화 요약 (프론트에서 표시용)."""
+        prev_prob = user_context.get("previous_risk_probability")
+        curr_prob = user_context.get("current_risk_probability")
+
+        if prev_prob is None or curr_prob is None:
+            return None
+
+        diff = prev_prob - curr_prob
+        return {
+            "previous_probability": round(prev_prob * 100, 1),
+            "current_probability": round(curr_prob * 100, 1),
+            "change": round(diff * 100, 1),
+            "improved": diff > 0,
+            "message": f"{int(prev_prob * 100)}% → {int(curr_prob * 100)}%",
         }
 
     def get_meal_reaction(self, meal_analysis: dict) -> dict:
