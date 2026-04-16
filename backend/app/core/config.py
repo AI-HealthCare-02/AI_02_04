@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     KAKAO_REST_API_KEY: str = ""
     KAKAO_REDIRECT_URI: str = ""
     KAKAO_CLIENT_SECRET: str = ""
+    REDIS_URL: str = ""
 
     class Config:
         env_file = ".env"

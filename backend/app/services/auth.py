@@ -4,6 +4,7 @@ from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+import redis.asyncio as redis
 
 from app.core.config import settings
 from app.models.user import User, UserType, GoalType, RiskLevel, DiabetesType
@@ -32,8 +33,8 @@ def create_access_token(user: User) -> str:
         payload["goal"] = user.goal.value if user.goal else None  # type:ignore
     elif user.user_type.value == UserType.risk:
         payload["risk_level"] = (
-            user.risk_level.value if user.risk_level else None
-        )  # type:ignore
+            user.risk_level.value if user.risk_level else None  # type:ignore
+        )
     elif user.user_type.value == UserType.diabetes:
         payload["diabetes_type"] = (
             user.diabetes_type.value if user.diabetes_type else None  # type:ignore

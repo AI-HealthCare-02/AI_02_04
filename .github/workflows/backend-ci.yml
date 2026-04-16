@@ -90,3 +90,7 @@ jobs:
             --service dangmago-backend-service-gb8hxei0 \
             --force-new-deployment \
             --region ap-northeast-2
+
+
+
+

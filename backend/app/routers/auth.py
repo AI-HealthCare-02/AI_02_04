@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 import httpx
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from datetime import datetime
 
+from app.core.redis import add_to_blacklist
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.schemas.auth import (
@@ -19,6 +22,7 @@ from app.models.user import User
 
 
 router = APIRouter()
+security = HTTPBearer()
 
 
 @router.post("/register", status_code=201)
@@ -36,12 +40,12 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             "user_id": user.id,
             "user_type": user.user_type.value,
             "risk_level": (
-                user.risk_level.value if user.risk_level else None
-            ),  # type:ignore
+                user.risk_level.value if user.risk_level else None  # type:ignore
+            ),
             "goal": user.goal.value if user.goal else None,  # type:ignore
             "diabetes_type": (
-                user.diabetes_type.value if user.diabetes_type else None
-            ),  # type:ignore
+                user.diabetes_type.value if user.diabetes_type else None  # type:ignore
+            ),
             "access_token": access_token,
             "refresh_token": refresh_token,
         },
@@ -113,7 +117,19 @@ def check_email(email: str = Query(...), db: Session = Depends(get_db)):
 
 
 @router.post("/signout")
-def signout(current_user: dict = Depends(get_current_user)):
+async def signout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: dict = Depends(get_current_user),
+):
+    token = credentials.credentials
+    payload = current_user["payload"]
+
+    exp = payload.get("exp")
+    now = int(datetime.utcnow().timestamp())
+    ttl = exp - now
+
+    if ttl > 0:
+        await add_to_blacklist(token, ttl)
     return {"success": True, "message": "로그아웃 되었습니다."}
 
 
