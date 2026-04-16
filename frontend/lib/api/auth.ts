@@ -52,3 +52,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 export async function refreshTokens(refreshToken: string): Promise<AuthResponse> {
   return client.post<AuthResponse>("/auth/refresh", { refresh_token: refreshToken });
 }
+
+export async function checkEmail(email: string): Promise<{ success: boolean; message: string }> {
+  return client.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
+}

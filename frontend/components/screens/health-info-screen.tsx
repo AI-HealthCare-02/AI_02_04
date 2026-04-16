@@ -190,21 +190,18 @@ export function HealthInfoScreen() {
     setIsEmailChecking(true);
     setEmailMessage("");
     try {
-      const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-      const res = await fetch(
-        `${BASE_URL}/auth/check-email?email=${encodeURIComponent(formData.email)}`,
-        {}
-      );
-      const json = await res.json();
-      if (json.data?.available) {
-        setEmailMessage("사용 가능한 이메일입니다.");
-        setIsEmailChecked(true);
+      await checkEmail(formData.email);
+      // 200 응답 = 사용 가능
+      setEmailMessage("사용 가능한 이메일입니다.");
+      setIsEmailChecked(true);
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      // 409 응답 = 이미 사용 중
+      if (msg.includes("이미")) {
+        setEmailMessage(msg);
       } else {
         setEmailMessage("이미 사용 중인 이메일입니다.");
-        setIsEmailChecked(false);
       }
-    } catch {
-      setEmailMessage("확인 중 오류가 발생했습니다. 다시 시도해주세요.");
       setIsEmailChecked(false);
     } finally {
       setIsEmailChecking(false);
