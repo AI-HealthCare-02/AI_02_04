@@ -1,12 +1,11 @@
-
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { AlertModal } from "@/components/ui/confirm-dialog";
 import { ScrollHeader } from "@/components/ui/scroll-header";
 import { useScrollHeader } from "@/hooks/use-scroll-header";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Save,
@@ -16,23 +15,22 @@ import {
   Heart,
   ClipboardCheck,
   Edit3,
-  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BackendUserType } from "@/lib/types";
 
 export function EditHealthInfoScreen() {
   const { userProfile, setUserProfile, setScreen } = useAppStore();
+  const { toast } = useToast();
 
   const isScrolled = useScrollHeader();
   const [isEditing, setIsEditing] = useState(false);
-  const [showSaveAlert, setShowSaveAlert] = useState(false);
 
   const [formData, setFormData] = useState({
     ...userProfile,
-    age: userProfile?.age || 0,
-    height: userProfile?.height || 0,
-    weight: userProfile?.weight || 0,
+    age: String(userProfile?.age ?? ""),
+    height: String(userProfile?.height ?? ""),
+    weight: String(userProfile?.weight ?? ""),
     gender: userProfile?.gender || "male",
     diabetesStatus: userProfile?.diabetesStatus || "none",
     highBp: userProfile?.highBp || false,
@@ -44,26 +42,42 @@ export function EditHealthInfoScreen() {
   });
 
   const handleSave = () => {
-    if (userProfile) {
-      let newHealthType: BackendUserType = userProfile.healthType;
-      const bmi = formData.weight / (formData.height / 100) ** 2;
-      const isRiskAge = formData.age >= 45;
-      const isRiskGroup = bmi >= 25 || isRiskAge;
+    const base = userProfile ?? {} as any;
+    let newHealthType: BackendUserType = userProfile?.healthType ?? "pending";
 
-      if (formData.diabetesStatus === "1") {
-        newHealthType = "diabetic_1";
-      } else if (formData.diabetesStatus === "2") {
-        newHealthType = "diabetic_2";
-      } else if (isRiskGroup) {
-        newHealthType = "at_risk";
-      } else if (["diabetic_1", "diabetic_2", "at_risk"].includes(newHealthType)) {
-        newHealthType = "general_health";
-      }
+    const ageNum    = parseFloat(String(formData.age))    || 0;
+    const heightNum = parseFloat(String(formData.height)) || 0;
+    const weightNum = parseFloat(String(formData.weight)) || 0;
 
-      setUserProfile({ ...userProfile, ...formData, healthType: newHealthType });
-      setIsEditing(false);
-      setShowSaveAlert(true);
+    const bmi = heightNum > 0 ? weightNum / (heightNum / 100) ** 2 : 0;
+    const isRiskAge   = ageNum >= 45;
+    const isRiskGroup = bmi >= 25 || isRiskAge;
+
+    if (formData.diabetesStatus === "1") {
+      newHealthType = "diabetic_1";
+    } else if (formData.diabetesStatus === "2") {
+      newHealthType = "diabetic_2";
+    } else if (isRiskGroup) {
+      newHealthType = "at_risk";
+    } else if (["diabetic_1", "diabetic_2", "at_risk"].includes(newHealthType)) {
+      newHealthType = "general_health";
     }
+
+    setUserProfile({
+      ...base,
+      ...formData,
+      age:    ageNum,
+      height: heightNum,
+      weight: weightNum,
+      healthType: newHealthType,
+    });
+
+    setIsEditing(false);
+    toast({
+      title: "건강 정보가 저장되었습니다",
+      description: "변경된 정보가 반영되었습니다.",
+    });
+    setTimeout(() => setScreen("mypage"), 1000);
   };
 
   // ── 섹션 타이틀 ──────────────────────────────────────
@@ -83,7 +97,11 @@ export function EditHealthInfoScreen() {
         className="size-7 rounded-lg flex items-center justify-center"
         style={{ backgroundColor: iconBg }}
       >
-        <Icon className="size-3.5" style={{ color: iconColor }} strokeWidth={2} />
+        <Icon
+          className="size-3.5"
+          style={{ color: iconColor }}
+          strokeWidth={2}
+        />
       </div>
       <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">
         {title}
@@ -115,7 +133,7 @@ export function EditHealthInfoScreen() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pb-32">
+    <div className="min-h-screen bg-[#FAFAFA]">
       {/* ── 스크롤 컴팩트 헤더 ── */}
       <ScrollHeader
         title={isEditing ? "건강 프로필 수정" : "내 건강 정보"}
@@ -139,7 +157,9 @@ export function EditHealthInfoScreen() {
               {isEditing ? "건강 프로필 수정" : "내 건강 정보"}
             </h1>
             <p className="text-[13px] text-[#7A7A7A] font-medium">
-              {isEditing ? "정보를 수정하고 저장해 주세요" : "나의 건강 기본 정보"}
+              {isEditing
+                ? "정보를 수정하고 저장해 주세요"
+                : "나의 건강 기본 정보"}
             </p>
           </div>
           {/* 편집 모드가 아닐 때 우측 수정 아이콘 */}
@@ -160,7 +180,8 @@ export function EditHealthInfoScreen() {
           <div className="mt-4 flex gap-3 bg-[#EBF5FF] border border-[#AEE1F9] rounded-2xl p-4">
             <AlertCircle className="size-4 text-[#2878B0] shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#1A5A8C] leading-relaxed">
-              저장 시 AI가 건강 상태를 다시 분석하며, 오늘의 미션이 즉시 새롭게 변경됩니다.
+              저장 시 AI가 건강 상태를 다시 분석하며, 오늘의 미션이 즉시 새롭게
+              변경됩니다.
             </p>
           </div>
         )}
@@ -168,7 +189,12 @@ export function EditHealthInfoScreen() {
         {/* ════════════════════════
             1. 기본 신체 정보
         ════════════════════════ */}
-        <SectionLabel icon={User} title="기본 신체 정보" iconBg="#CBF891" iconColor="#3E8C28" />
+        <SectionLabel
+          icon={User}
+          title="기본 신체 정보"
+          iconBg="#CBF891"
+          iconColor="#3E8C28"
+        />
 
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
           {isEditing ? (
@@ -177,16 +203,22 @@ export function EditHealthInfoScreen() {
               {/* 나이 / 성별 */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">나이</p>
+                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">
+                    나이
+                  </p>
                   <Input
                     type="number"
                     value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, age: e.target.value })
+                    }
                     className="h-11 rounded-xl text-[15px] font-bold border-[#E8E8E8] focus:border-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">성별</p>
+                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">
+                    성별
+                  </p>
                   <div className="flex bg-[#F0F0F0] rounded-xl p-1 h-11">
                     {[
                       { value: "male", label: "남성" },
@@ -200,7 +232,9 @@ export function EditHealthInfoScreen() {
                             ? "bg-white text-[#2A2A2A] shadow-sm"
                             : "text-[#9B9B9B]",
                         )}
-                        onClick={() => setFormData({ ...formData, gender: opt.value as any })}
+                        onClick={() =>
+                          setFormData({ ...formData, gender: opt.value as any })
+                        }
                       >
                         {opt.label}
                       </button>
@@ -212,27 +246,39 @@ export function EditHealthInfoScreen() {
               {/* 키 / 몸무게 */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">키</p>
+                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">
+                    키
+                  </p>
                   <div className="relative">
                     <Input
                       type="number"
                       value={formData.height}
-                      onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, height: e.target.value })
+                      }
                       className="h-11 rounded-xl text-[15px] font-bold border-[#E8E8E8] focus:border-primary pr-10"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#9B9B9B] font-medium">cm</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#9B9B9B] font-medium">
+                      cm
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">몸무게</p>
+                  <p className="text-[11px] font-bold text-[#6A6A6A] uppercase tracking-[0.04em]">
+                    몸무게
+                  </p>
                   <div className="relative">
                     <Input
                       type="number"
                       value={formData.weight}
-                      onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, weight: e.target.value })
+                      }
                       className="h-11 rounded-xl text-[15px] font-bold border-[#E8E8E8] focus:border-primary pr-10"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#9B9B9B] font-medium">kg</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#9B9B9B] font-medium">
+                      kg
+                    </span>
                   </div>
                 </div>
               </div>
@@ -241,7 +287,10 @@ export function EditHealthInfoScreen() {
             /* 읽기 모드 */
             <div className="px-5">
               <FieldRow label="나이" value={formData.age} unit="세" />
-              <FieldRow label="성별" value={formData.gender === "male" ? "남성" : "여성"} />
+              <FieldRow
+                label="성별"
+                value={formData.gender === "male" ? "남성" : "여성"}
+              />
               <FieldRow label="키" value={formData.height} unit="cm" />
               <FieldRow label="몸무게" value={formData.weight} unit="kg" />
             </div>
@@ -251,7 +300,12 @@ export function EditHealthInfoScreen() {
         {/* ════════════════════════
             2. 질환 및 위험 요인
         ════════════════════════ */}
-        <SectionLabel icon={Heart} title="질환 및 위험 요인" iconBg="#FFB8CA" iconColor="#C0305A" />
+        <SectionLabel
+          icon={Heart}
+          title="질환 및 위험 요인"
+          iconBg="#FFB8CA"
+          iconColor="#C0305A"
+        />
 
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
           {[
@@ -275,13 +329,19 @@ export function EditHealthInfoScreen() {
               {idx > 0 && <div className="h-px bg-[#F5F5F5] mx-5" />}
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
-                  <p className="text-[15px] font-semibold text-[#2A2A2A]">{item.label}</p>
-                  <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">{item.sub}</p>
+                  <p className="text-[15px] font-semibold text-[#2A2A2A]">
+                    {item.label}
+                  </p>
+                  <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">
+                    {item.sub}
+                  </p>
                 </div>
                 {isEditing ? (
                   <Switch
                     checked={formData[item.key] as boolean}
-                    onCheckedChange={(val) => setFormData({ ...formData, [item.key]: val })}
+                    onCheckedChange={(val) =>
+                      setFormData({ ...formData, [item.key]: val })
+                    }
                   />
                 ) : (
                   <span
@@ -303,7 +363,12 @@ export function EditHealthInfoScreen() {
         {/* ════════════════════════
             3. 당뇨병 진단 여부
         ════════════════════════ */}
-        <SectionLabel icon={ClipboardCheck} title="당뇨병 진단 여부" iconBg="#A1E8CE" iconColor="#1A7858" />
+        <SectionLabel
+          icon={ClipboardCheck}
+          title="당뇨병 진단 여부"
+          iconBg="#A1E8CE"
+          iconColor="#1A7858"
+        />
 
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5">
           {isEditing ? (
@@ -315,7 +380,12 @@ export function EditHealthInfoScreen() {
               ].map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setFormData({ ...formData, diabetesStatus: opt.value as any })}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diabetesStatus: opt.value as any,
+                    })
+                  }
                   className={cn(
                     "h-14 rounded-xl text-[13px] font-bold border-2 transition-all",
                     formData.diabetesStatus === opt.value
@@ -329,7 +399,9 @@ export function EditHealthInfoScreen() {
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <p className="text-[13px] font-medium text-[#7A7A7A]">당뇨 유형</p>
+              <p className="text-[13px] font-medium text-[#7A7A7A]">
+                당뇨 유형
+              </p>
               <span
                 className={cn(
                   "text-[13px] font-bold px-3 py-1.5 rounded-full",
@@ -351,19 +423,30 @@ export function EditHealthInfoScreen() {
         {/* ════════════════════════
             4. 생활 습관
         ════════════════════════ */}
-        <SectionLabel icon={Activity} title="생활 습관" iconBg="#AEE1F9" iconColor="#2878B0" />
+        <SectionLabel
+          icon={Activity}
+          title="생활 습관"
+          iconBg="#AEE1F9"
+          iconColor="#2878B0"
+        />
 
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
           {/* 흡연 */}
           <div className="flex items-center justify-between px-5 py-4">
             <div>
-              <p className="text-[15px] font-semibold text-[#2A2A2A]">현재 흡연 여부</p>
-              <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">현재 담배를 피우고 있나요?</p>
+              <p className="text-[15px] font-semibold text-[#2A2A2A]">
+                현재 흡연 여부
+              </p>
+              <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">
+                현재 담배를 피우고 있나요?
+              </p>
             </div>
             {isEditing ? (
               <Switch
                 checked={formData.smoking}
-                onCheckedChange={(val) => setFormData({ ...formData, smoking: val })}
+                onCheckedChange={(val) =>
+                  setFormData({ ...formData, smoking: val })
+                }
               />
             ) : (
               <span
@@ -384,13 +467,19 @@ export function EditHealthInfoScreen() {
           {/* 과음 */}
           <div className="flex items-center justify-between px-5 py-4">
             <div>
-              <p className="text-[15px] font-semibold text-[#2A2A2A]">과음 여부</p>
-              <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">주 2회 이상 음주하나요?</p>
+              <p className="text-[15px] font-semibold text-[#2A2A2A]">
+                과음 여부
+              </p>
+              <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">
+                주 2회 이상 음주하나요?
+              </p>
             </div>
             {isEditing ? (
               <Switch
                 checked={formData.heavyDrinking}
-                onCheckedChange={(val) => setFormData({ ...formData, heavyDrinking: val })}
+                onCheckedChange={(val) =>
+                  setFormData({ ...formData, heavyDrinking: val })
+                }
               />
             ) : (
               <span
@@ -412,12 +501,18 @@ export function EditHealthInfoScreen() {
           <div className="px-5 py-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[15px] font-semibold text-[#2A2A2A]">월간 신체 활동량</p>
-                <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">한 달 기준 활동한 날수</p>
+                <p className="text-[15px] font-semibold text-[#2A2A2A]">
+                  월간 신체 활동량
+                </p>
+                <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">
+                  한 달 기준 활동한 날수
+                </p>
               </div>
               {!isEditing && (
                 <span className="text-[12px] font-bold bg-[#AEE1F9] text-[#2878B0] px-2.5 py-1 rounded-full">
-                  {formData.physicalActivity === "21-30" ? "매일 가깝게" : `${formData.physicalActivity}일`}
+                  {formData.physicalActivity === "21-30"
+                    ? "매일 가깝게"
+                    : `${formData.physicalActivity}일`}
                 </span>
               )}
             </div>
@@ -432,7 +527,12 @@ export function EditHealthInfoScreen() {
                         ? "bg-white text-primary shadow-sm"
                         : "text-[#9B9B9B]",
                     )}
-                    onClick={() => setFormData({ ...formData, physicalActivity: range as any })}
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        physicalActivity: range as any,
+                      })
+                    }
                   >
                     {range === "21-30" ? "매일 가깝게" : `${range}일`}
                   </button>
@@ -474,17 +574,6 @@ export function EditHealthInfoScreen() {
         </div>
       </div>
 
-      {/* ── 저장 완료 알림 ── */}
-      <AlertModal
-        open={showSaveAlert}
-        onOpenChange={setShowSaveAlert}
-        icon={CheckCircle2}
-        iconBg="#CBF891"
-        iconColor="#3E8C28"
-        title="건강 정보가 업데이트되었습니다"
-        description="맞춤 미션이 새로운 건강 정보에 맞게 재설정되었습니다."
-        confirmLabel="확인"
-      />
     </div>
   );
 }
