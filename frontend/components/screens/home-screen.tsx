@@ -297,8 +297,7 @@ export function HomeScreen() {
 
   /* ── ML API 호출 (백엔드 준비 후 아래 주석 해제) ── */
   useEffect(() => {
-    const userId = userProfile?.id ?? "guest";
-    fetchRecommendations({ user_id: userId })
+    fetchRecommendations()
       .then((data) => {
         setCorrectionStatus(data.correction_status);
         setEscalationMessage(data.escalation_message);
@@ -720,7 +719,7 @@ export function HomeScreen() {
                           <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
                             {rec.reason}
                           </p>
-                          <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
+                          <div className="flex items-start gap-1.5 pt-2.5 border-t border-black/[0.05]">
                             <BookOpen className="size-3 text-[#9B9B9B]" />
                             <span className="text-[11px] text-[#9B9B9B] font-medium">
                               {rec.source}

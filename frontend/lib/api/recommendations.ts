@@ -1,18 +1,16 @@
 import { client } from "./client";
-import type {
-  RecommendationsRequest,
-  RecommendationsResponse,
-} from "./types";
+import type { RecommendationsData, RecommendationsResponse } from "./types";
 
 /**
- * LLM 맞춤 추천 3개 + 위험요인 TOP 3를 요청합니다.
+ * POST /recommend
+ * - JWT 토큰으로 유저 인증 (요청 바디 불필요)
+ * - 백엔드 응답: { success: true, data: { recommendations, correction_status, ... } }
  *
  * ⚠️ correction_status === "ESCALATED"이면
  *    recommendations 배열을 절대 렌더링하지 마세요.
  *    escalation_message와 빨간 경고 배너만 표시해야 합니다.
  */
-export async function fetchRecommendations(
-  body: RecommendationsRequest
-): Promise<RecommendationsResponse> {
-  return client.post<RecommendationsResponse>("/recommend", body);
+export async function fetchRecommendations(): Promise<RecommendationsData> {
+  const res = await client.post<RecommendationsResponse>("/recommend", {});
+  return res.data;
 }

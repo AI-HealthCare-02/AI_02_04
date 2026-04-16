@@ -45,7 +45,7 @@ export interface DietManualUpdateRequest {
   protein?: number;
 }
 
-// ─── 추천 (POST /recommendations) ───────────────────────────────────────────
+// ─── 추천 (POST /recommend) ──────────────────────────────────────────────────
 
 export type CorrectionStatus =
   | "CONFIDENT"
@@ -62,18 +62,24 @@ export interface Recommendation {
   difficulty: Difficulty;
 }
 
-export interface RecommendationsResponse {
+export interface RecommendationsData {
   recommendations: Recommendation[];
   correction_status: CorrectionStatus;
   safety_flags: string[];
   disclaimer: string;
+  generated_at: string;
   /** ESCALATED일 때만 존재 */
   escalation_message?: string;
+  /** INSUFFICIENT 또는 safety 차단 시 존재 */
+  fallback_message?: string;
+  /** CRAG-lite caveat 메시지 */
+  caveat?: string;
 }
 
-export interface RecommendationsRequest {
-  user_id: string;
-  diet_id?: string;
+/** 백엔드 응답 래퍼: { success: true, data: RecommendationsData } */
+export interface RecommendationsResponse {
+  success: boolean;
+  data: RecommendationsData;
 }
 
 // ─── 주간 리포트 (GET /report/weekly) ───────────────────────────────────────

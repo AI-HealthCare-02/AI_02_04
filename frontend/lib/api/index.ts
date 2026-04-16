@@ -13,7 +13,7 @@ export type {
   // 추천
   CorrectionStatus,
   Recommendation,
-  RecommendationsRequest,
+  RecommendationsData,
   RecommendationsResponse,
   // 리포트
   ReportType,
