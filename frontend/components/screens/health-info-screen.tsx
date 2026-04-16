@@ -302,7 +302,7 @@ export function HealthInfoScreen() {
         diabetesStatus: formData.diabetesStatus as any,
         healthGoal: "건강한 생활 습관 만들기",
         healthType: initialHealthType,
-        points: 0,
+        exp: 0,
         streak: 0,
         lastActiveDate: new Date(),
       });

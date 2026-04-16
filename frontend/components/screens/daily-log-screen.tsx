@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   Flame,
-  Coins,
+  Zap,
   Clock,
   Edit3,
   Footprints,
@@ -31,21 +30,21 @@ interface ChallengeLog {
   is_completed: boolean;
   fail_reason?: "tired" | "no_time" | "weather" | "other" | null;
   execution_time?: "morning" | "afternoon" | "evening" | null;
-  points_earned: number;
+  exp_earned: number;
   streak_count: number;
 }
 
 const FAIL_REASON_LABELS = {
-  tired:   "너무 피곤했어요 😫",
+  tired: "너무 피곤했어요 😫",
   no_time: "시간이 부족했어요 ⏱️",
   weather: "날씨가 안 좋았어요 🌧️",
-  other:   "기타 다른 이유 🤔",
+  other: "기타 다른 이유 🤔",
 };
 
 const EXECUTION_TIME_LABELS = {
-  morning:   "아침 🌅",
+  morning: "아침 🌅",
   afternoon: "오후 ☀️",
-  evening:   "저녁 🌙",
+  evening: "저녁 🌙",
 };
 
 // 요일별 색상 (오늘 = primary, 완료일 = 연초록, 미완 = 기본)
@@ -64,7 +63,7 @@ export function DailyLogScreen() {
       value: "10,500 / 10,000 걸음",
       is_completed: true,
       execution_time: "afternoon",
-      points_earned: 100,
+      exp_earned: 100,
       streak_count: 5,
     },
     {
@@ -74,7 +73,7 @@ export function DailyLogScreen() {
       value: "8 / 8 잔",
       is_completed: true,
       execution_time: "morning",
-      points_earned: 50,
+      exp_earned: 50,
       streak_count: 12,
     },
     {
@@ -85,7 +84,7 @@ export function DailyLogScreen() {
       is_completed: false,
       fail_reason: "tired",
       execution_time: "evening",
-      points_earned: 0,
+      exp_earned: 0,
       streak_count: 0,
     },
     {
@@ -96,28 +95,35 @@ export function DailyLogScreen() {
       is_completed: false,
       fail_reason: null,
       execution_time: null,
-      points_earned: 0,
+      exp_earned: 0,
       streak_count: 0,
     },
   ]);
 
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
-  const [tempReason, setTempReason] = useState<ChallengeLog["fail_reason"]>(null);
-  const [tempTime,   setTempTime]   = useState<ChallengeLog["execution_time"]>(null);
+  const [tempReason, setTempReason] =
+    useState<ChallengeLog["fail_reason"]>(null);
+  const [tempTime, setTempTime] =
+    useState<ChallengeLog["execution_time"]>(null);
 
   // 요약 계산
-  const completedCount   = logs.filter((l) => l.is_completed).length;
-  const totalCount       = logs.length;
-  const progressPercent  = (completedCount / totalCount) * 100;
-  const todayPoints      = logs.reduce((sum, l) => sum + l.points_earned, 0);
-  const maxStreak        = Math.max(...logs.map((l) => l.streak_count));
+  const completedCount = logs.filter((l) => l.is_completed).length;
+  const totalCount = logs.length;
+  const progressPercent = (completedCount / totalCount) * 100;
+  const todayExps = logs.reduce((sum, l) => sum + l.exp_earned, 0);
+  const maxStreak = Math.max(...logs.map((l) => l.streak_count));
 
   const handleSaveReason = () => {
     if (!selectedLogId || !tempReason) return;
     setLogs(
       logs.map((log) =>
         log.log_id === selectedLogId
-          ? { ...log, fail_reason: tempReason, execution_time: tempTime, points_earned: 10 }
+          ? {
+              ...log,
+              fail_reason: tempReason,
+              execution_time: tempTime,
+              exp_earned: 10,
+            }
           : log,
       ),
     );
@@ -164,23 +170,18 @@ export function DailyLogScreen() {
       </div>
 
       <div className="px-5 pt-5 space-y-4">
-
         {/* ── 1. 주간 캘린더 스트립 ── */}
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] px-4 py-3">
           <div className="flex justify-between items-center">
             {weekDays.map((day, idx) => {
               const isToday = idx === todayIndex;
-              const isPast  = idx < todayIndex;
+              const isPast = idx < todayIndex;
               return (
                 <div
                   key={day}
                   className={cn(
                     "flex flex-col items-center gap-1 w-10 py-2 rounded-xl transition-colors",
-                    isToday
-                      ? "bg-primary"
-                      : isPast
-                        ? "bg-[#F0FDF4]"
-                        : "",
+                    isToday ? "bg-primary" : isPast ? "bg-[#F0FDF4]" : "",
                   )}
                 >
                   <span
@@ -237,7 +238,9 @@ export function DailyLogScreen() {
             </div>
             <p className="text-[36px] font-bold text-[#2A2A2A] leading-none tracking-[-0.02em]">
               {Math.round(progressPercent)}
-              <span className="text-[18px] font-bold text-[#9B9B9B] ms-0.5">%</span>
+              <span className="text-[18px] font-bold text-[#9B9B9B] ms-0.5">
+                %
+              </span>
             </p>
           </div>
 
@@ -254,15 +257,17 @@ export function DailyLogScreen() {
 
           {/* 구분선 + 스탯 */}
           <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#F5F5F5]">
-            <div className="flex items-center gap-3 bg-[#FFF9D6] rounded-xl px-3.5 py-3">
+            <div className="flex items-center gap-3 bg-[#FFFBE7] rounded-xl px-3.5 py-3">
               <div className="size-8 rounded-lg bg-[#FFF383] flex items-center justify-center">
-                <Coins className="size-4 text-[#8C7010]" />
+                <Zap className="size-4 text-[#6366F1]" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-[#7A7A7A]">획득 포인트</p>
+                <p className="text-[11px] font-medium text-[#7A7A7A]">
+                  획득 경험치
+                </p>
                 <p className="text-[16px] font-black text-[#8C7010] leading-none">
-                  +{todayPoints}
-                  <span className="text-[10px] ms-0.5">P</span>
+                  +{todayExps}
+                  <span className="text-[10px] ms-0.5">XP</span>
                 </p>
               </div>
             </div>
@@ -271,7 +276,9 @@ export function DailyLogScreen() {
                 <Flame className="size-4 text-[#C0502A]" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-[#7A7A7A]">최고 연속</p>
+                <p className="text-[11px] font-medium text-[#7A7A7A]">
+                  최고 연속
+                </p>
                 <p className="text-[16px] font-black text-[#C0502A] leading-none">
                   {maxStreak}
                   <span className="text-[10px] ms-0.5">일</span>
@@ -289,9 +296,9 @@ export function DailyLogScreen() {
 
           <div className="space-y-2.5">
             {logs.map((log) => {
-              const Icon       = log.icon;
+              const Icon = log.icon;
               const isCompleted = log.is_completed;
-              const hasReason  = !isCompleted && log.fail_reason;
+              const hasReason = !isCompleted && log.fail_reason;
               const needsReason = !isCompleted && !log.fail_reason;
 
               return (
@@ -363,8 +370,7 @@ export function DailyLogScreen() {
                       {isCompleted ? (
                         <div className="flex items-center gap-3">
                           <span className="flex items-center gap-1 text-[11px] font-bold text-[#3E8C28] bg-[#E8F9D6] px-2.5 py-1 rounded-full">
-                            <Coins className="size-3" />
-                            +{log.points_earned}P 획득
+                            <Zap className="size-3" />+{log.exp_earned}XP 획득
                           </span>
                           {log.streak_count > 0 && (
                             <span className="flex items-center gap-1 text-[11px] font-bold text-[#C0502A] bg-[#FFF5F0] px-2.5 py-1 rounded-full">
@@ -412,7 +418,6 @@ export function DailyLogScreen() {
             </p>
           </div>
         </div>
-
       </div>
 
       {/* ── 미달성 사유 입력 모달 ── */}
@@ -423,13 +428,18 @@ export function DailyLogScreen() {
         <DialogContent showCloseButton={false}>
           {/* 아이콘 헤더 */}
           <div className="size-14 rounded-full bg-[#FFB8CA] flex items-center justify-center mx-auto mb-1">
-            <MessageSquareHeart className="size-7 text-[#C0305A]" strokeWidth={2} />
+            <MessageSquareHeart
+              className="size-7 text-[#C0305A]"
+              strokeWidth={2}
+            />
           </div>
 
-          <DialogTitle className="text-center">앗, 오늘은 아쉽네요! 🥲</DialogTitle>
+          <DialogTitle className="text-center">
+            앗, 오늘은 아쉽네요! 🥲
+          </DialogTitle>
           <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
-            내일 더 꼭 맞는 AI 건강 조언을 해드리기 위해<br />
-            못 하신 이유를 살짝 알려주세요.
+            내일 더 꼭 맞는 AI 건강 조언을 해드리기 위해
+            <br />못 하신 이유를 살짝 알려주세요.
           </p>
 
           <div className="space-y-4 mt-5">
@@ -439,22 +449,24 @@ export function DailyLogScreen() {
                 어떤 이유 때문이었나요?
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(FAIL_REASON_LABELS) as Array<keyof typeof FAIL_REASON_LABELS>).map(
-                  (reason) => (
-                    <button
-                      key={reason}
-                      onClick={() => setTempReason(reason)}
-                      className={cn(
-                        "py-3 px-2 text-[13px] font-semibold rounded-2xl border-2 transition-all text-center",
-                        tempReason === reason
-                          ? "bg-primary text-white border-primary shadow-sm"
-                          : "bg-white text-[#7A7A7A] border-[#E8EEE9] hover:border-primary/40 hover:bg-[#F9FFEF]",
-                      )}
-                    >
-                      {FAIL_REASON_LABELS[reason]}
-                    </button>
-                  ),
-                )}
+                {(
+                  Object.keys(FAIL_REASON_LABELS) as Array<
+                    keyof typeof FAIL_REASON_LABELS
+                  >
+                ).map((reason) => (
+                  <button
+                    key={reason}
+                    onClick={() => setTempReason(reason)}
+                    className={cn(
+                      "py-3 px-2 text-[13px] font-semibold rounded-2xl border-2 transition-all text-center",
+                      tempReason === reason
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-white text-[#7A7A7A] border-[#E8EEE9] hover:border-primary/40 hover:bg-[#F9FFEF]",
+                    )}
+                  >
+                    {FAIL_REASON_LABELS[reason]}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -465,22 +477,24 @@ export function DailyLogScreen() {
                 <span className="normal-case font-normal">(선택)</span>
               </p>
               <div className="flex gap-2">
-                {(Object.keys(EXECUTION_TIME_LABELS) as Array<keyof typeof EXECUTION_TIME_LABELS>).map(
-                  (time) => (
-                    <button
-                      key={time}
-                      onClick={() => setTempTime(time)}
-                      className={cn(
-                        "flex-1 py-2.5 text-[13px] font-semibold rounded-2xl border-2 transition-all",
-                        tempTime === time
-                          ? "bg-[#CBF891] text-[#2A5C34] border-[#87D57B]"
-                          : "bg-white text-[#7A7A7A] border-[#E8EEE9] hover:border-primary/40 hover:bg-[#F9FFEF]",
-                      )}
-                    >
-                      {EXECUTION_TIME_LABELS[time]}
-                    </button>
-                  ),
-                )}
+                {(
+                  Object.keys(EXECUTION_TIME_LABELS) as Array<
+                    keyof typeof EXECUTION_TIME_LABELS
+                  >
+                ).map((time) => (
+                  <button
+                    key={time}
+                    onClick={() => setTempTime(time)}
+                    className={cn(
+                      "flex-1 py-2.5 text-[13px] font-semibold rounded-2xl border-2 transition-all",
+                      tempTime === time
+                        ? "bg-[#CBF891] text-[#2A5C34] border-[#87D57B]"
+                        : "bg-white text-[#7A7A7A] border-[#E8EEE9] hover:border-primary/40 hover:bg-[#F9FFEF]",
+                    )}
+                  >
+                    {EXECUTION_TIME_LABELS[time]}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -498,7 +512,7 @@ export function DailyLogScreen() {
                 disabled={!tempReason}
                 onClick={handleSaveReason}
               >
-                기록하고 포인트 받기
+                기록하고 경험치 받기
               </Button>
             </div>
           </div>

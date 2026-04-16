@@ -51,7 +51,7 @@ export function CharacterBirthScreen() {
       level: 1,
       mood: 'happy',
       experience: 0,
-      experienceToNextLevel: 200,
+      experienceToNextLevel: 800,
       createdAt: new Date(),
     });
     setStage('named');

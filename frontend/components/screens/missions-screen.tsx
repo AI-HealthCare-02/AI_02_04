@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog, AlertModal } from "@/components/ui/confirm-dialog";
@@ -25,9 +26,21 @@ import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/ui/navigation-menu";
 import type { Mission } from "@/lib/types";
 
+// XP에 따른 난이도 라벨 반환
+function getDifficultyLabel(exp: number): {
+  label: string;
+  color: string;
+  bg: string;
+} {
+  if (exp >= 60) return { label: "Hard", color: "#C0305A", bg: "#FFE4ED" };
+  if (exp >= 30) return { label: "Medium", color: "#D97706", bg: "#FEF9EE" };
+  return { label: "Easy", color: "#3E8C28", bg: "#E8F9D6" };
+}
+
 export function MissionsScreen() {
   const { setScreen, missions, completeMission, updateMissionProgress } =
     useAppStore();
+  const { toast } = useToast();
 
   const isScrolled = useScrollHeader();
 
@@ -53,7 +66,15 @@ export function MissionsScreen() {
     (m) => m.id !== "c1" && m.id !== "c2",
   );
 
-  /* ── 핸들러 (기존 로직 그대로) ── */
+  /* ── XP 획득 토스트 ── */
+  const showXpToast = (mission: Mission) => {
+    toast({
+      title: `+${mission.exp} XP 획득!`,
+      description: `"${mission.title}" 미션 완료`,
+    });
+  };
+
+  /* ── 핸들러 ── */
   const handleMissionClick = (mission: Mission) => {
     if (mission.completed) return;
     if (mission.id === "c1" || mission.id === "c2") return;
@@ -66,6 +87,7 @@ export function MissionsScreen() {
       setInputValue("");
     } else {
       completeMission(mission.id);
+      showXpToast(mission);
     }
   };
 
@@ -76,6 +98,7 @@ export function MissionsScreen() {
       return;
     }
     completeMission(selectedMission.id, inputValue);
+    showXpToast(selectedMission);
     setSelectedMission(null);
     setInputValue("");
   };
@@ -83,15 +106,23 @@ export function MissionsScreen() {
   const handleWaterAdd = (mission: Mission) => {
     if (mission.completed) return;
     const next = mission.current + 1;
-    if (next >= mission.target) completeMission(mission.id);
-    else updateMissionProgress(mission.id, next);
+    if (next >= mission.target) {
+      completeMission(mission.id);
+      showXpToast(mission);
+    } else {
+      updateMissionProgress(mission.id, next);
+    }
   };
 
   const handleStepSync = (mission: Mission) => {
     if (mission.completed) return;
     const next = Math.min(mission.current + 2500, mission.target);
-    if (next >= mission.target) completeMission(mission.id);
-    else updateMissionProgress(mission.id, next);
+    if (next >= mission.target) {
+      completeMission(mission.id);
+      showXpToast(mission);
+    } else {
+      updateMissionProgress(mission.id, next);
+    }
   };
 
   /* ═══════════════════════════════════════════════════
@@ -233,7 +264,7 @@ export function MissionsScreen() {
 
                 {/* 텍스트 영역 — flex-1로 가능한 모든 너비 사용, truncate 없음 */}
                 <div className="flex-1 min-w-0">
-                  {/* 첫째 줄: 제목 + 포인트 뱃지 */}
+                  {/* 첫째 줄: 제목 + 경험치 뱃지 */}
                   <div className="flex items-start justify-between gap-2 mb-0.5">
                     {/* 제목 — truncate 제거, 줄바꿈 허용 */}
                     <p
@@ -244,11 +275,24 @@ export function MissionsScreen() {
                     >
                       {mission.title}
                     </p>
-                    {/* 포인트 뱃지 — 오른쪽 상단 고정 */}
-                    <span className="shrink-0 flex items-center gap-0.5 text-[11px] font-bold text-[#D97706] bg-[#FEF9EE] px-2 py-1 rounded-full border border-[#D97706]/15">
-                      <Zap className="size-3" />
-                      {mission.points}P
-                    </span>
+                    {/* XP + 난이도 뱃지 */}
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {(() => {
+                        const d = getDifficultyLabel(mission.exp);
+                        return (
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ color: d.color, backgroundColor: d.bg }}
+                          >
+                            {d.label}
+                          </span>
+                        );
+                      })()}
+                      <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#6366F1] bg-[#EEF2FF] px-2 py-1 rounded-full border border-[#6366F1]/15">
+                        <Zap className="size-3" />
+                        {mission.exp}XP
+                      </span>
+                    </div>
                   </div>
 
                   {/* 둘째 줄: 설명 — truncate 제거, 전체 노출 */}
@@ -403,7 +447,10 @@ export function MissionsScreen() {
         confirmLabel="완료 처리"
         cancelLabel="취소"
         onConfirm={() => {
-          if (autoConfirmMission) completeMission(autoConfirmMission.id);
+          if (autoConfirmMission) {
+            completeMission(autoConfirmMission.id);
+            showXpToast(autoConfirmMission);
+          }
           setAutoConfirmMission(null);
         }}
       />
@@ -539,7 +586,7 @@ function SpecialMissionCard({
         mission.completed && "opacity-70",
       )}
     >
-      {/* 상단: 아이콘 + 제목 + 포인트 */}
+      {/* 상단: 아이콘 + 제목 + 경험치 */}
       <div className="flex items-start gap-4 p-5 pb-4">
         {/* 아이콘 or 완료 체크 */}
         <div
@@ -567,11 +614,24 @@ function SpecialMissionCard({
           <p className="text-[13px] text-[#7A7A7A]">{mission.description}</p>
         </div>
 
-        {/* 포인트 뱃지 */}
-        <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#D97706] bg-[#FEF9EE] px-2.5 py-1 rounded-full border border-[#D97706]/15 shrink-0">
-          <Zap className="size-3" />
-          {mission.points}P
-        </span>
+        {/* XP + 난이도 뱃지 */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {(() => {
+            const d = getDifficultyLabel(mission.exp);
+            return (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ color: d.color, backgroundColor: d.bg }}
+              >
+                {d.label}
+              </span>
+            );
+          })()}
+          <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#6366F1] bg-[#EEF2FF] px-2.5 py-1 rounded-full border border-[#6366F1]/15">
+            <Zap className="size-3" />
+            {mission.exp}XP
+          </span>
+        </div>
       </div>
 
       {/* 진행 영역 */}

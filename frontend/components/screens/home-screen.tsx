@@ -4,7 +4,6 @@ import { useAppStore } from "@/lib/store";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BottomNav } from "@/components/ui/navigation-menu";
 import {
-  Coins,
   Droplets,
   Footprints,
   Apple,
@@ -487,12 +486,12 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {/* 포인트 배지 */}
+          {/* 경험치 배지 */}
           {/* <div className="flex items-center gap-1.5 bg-white/50 backdrop-blur-sm rounded-full px-3.5 py-2 border border-white/70 shadow-[0_1px_8px_rgba(0,0,0,0.08)]">
-            <Coins className="size-3.5 text-[#D97706]" />
+            <Zap className="size-3.5 text-[#6366F1]" />
             <span className="text-[13px] font-bold text-[#1A2E1C]">
-              {(userProfile?.points ?? 0).toLocaleString()}
-              <span className="text-[11px] font-semibold text-[#3A6B44] ms-0.5">P</span>
+              {(character?.experience ?? 0).toLocaleString()}
+              <span className="text-[11px] font-semibold text-[#3A6B44] ms-0.5">XP</span>
             </span>
           </div> */}
         </div>
