@@ -1,5 +1,4 @@
-import { client } from "./client";
-import { getAuthToken } from "./client";
+import { client, fetchWithAuth } from "./client";
 import type { DietAnalyzeResponse, DietManualUpdateRequest } from "./types";
 
 /** 백엔드 응답 래퍼 */
@@ -12,6 +11,7 @@ interface DietAnalyzeApiResponse {
  * 음식 사진을 업로드하여 식단을 분석합니다.
  * POST /diet/analyze  (multipart/form-data, field name: "image")
  * - confidence < 0.7이면 프론트에서 [다시분석] / [직접입력] 버튼을 노출하세요.
+ * - 401 발생 시 토큰을 자동 갱신하고 재시도합니다.
  */
 export async function analyzeDiet(
   imageFile: File,
@@ -19,16 +19,12 @@ export async function analyzeDiet(
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const token = getAuthToken();
-  const res = await fetch(
-    `${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000"}/diet/analyze`,
-    {
-      method: "POST",
-      body: formData,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      // Content-Type은 브라우저가 multipart/form-data로 자동 설정 (직접 지정 금지)
-    },
-  );
+  // fetchWithAuth: Authorization 헤더 자동 첨부 + 401 시 토큰 갱신 재시도
+  // Content-Type은 브라우저가 multipart/form-data로 자동 설정 (직접 지정 금지)
+  const res = await fetchWithAuth("/diet/analyze", {
+    method: "POST",
+    body: formData,
+  });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

@@ -7,7 +7,7 @@ import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Character } from "@/components/character";
 import { kakaoLogin } from "@/lib/kakao";
 import { loginUser } from "@/lib/api/auth";
-import { setAuthToken } from "@/lib/api/client";
+import { setAuthToken, setRefreshToken } from "@/lib/api/client";
 
 /* ── 카카오 로고 SVG ─────────────────────────────────────── */
 function KakaoLogo({ className }: { className?: string }) {
@@ -49,6 +49,7 @@ export function LoginScreen() {
       const res = await loginUser(email, password);
       const { access_token, refresh_token } = res.data;
       setAuthToken(access_token);
+      setRefreshToken(refresh_token);
       setTokens(access_token, refresh_token);
       setIsAuthenticated(true);
       setScreen("home");
