@@ -149,7 +149,7 @@ class RecommendationEngine:
 
     def _assemble_context(self, user_context: dict) -> dict:
         """C1: 사용자 데이터를 구조화된 컨텍스트로 조합."""
-        return {
+        context = {
             "user_profile": {
                 "age": user_context.get("age"),
                 "gender": user_context.get("gender"),
@@ -167,6 +167,121 @@ class RecommendationEngine:
             "llm_advice_features": user_context.get("llm_advice_features", {}),
             "model_features": user_context.get("model_features", {}),
         }
+
+        # CatBoost 위험 요인 TOP 3 추출
+        context["risk_factors"] = self._extract_risk_factors(user_context)
+
+        # 이전 예측 결과 대비 변화 요인 (재예측 시)
+        context["risk_changes"] = self._extract_risk_changes(user_context)
+
+        return context
+
+    def _extract_risk_factors(self, user_context: dict) -> list:
+        """CatBoost 모델 피처에서 위험 요인 TOP 3 추출."""
+        mf = user_context.get("model_features", {})
+        if not mf:
+            return []
+
+        risk_factors = []
+
+        if mf.get("HighBP", 0) == 1:
+            risk_factors.append({
+                "factor": "고혈압",
+                "field": "HighBP",
+                "severity": "high",
+                "advice": "저염식 + 규칙적 유산소 운동이 필요합니다",
+            })
+        if mf.get("BMI", 0) >= 25:
+            bmi = mf.get("BMI", 0)
+            level = "비만" if bmi >= 30 else "과체중"
+            risk_factors.append({
+                "factor": f"BMI {bmi} ({level})",
+                "field": "BMI",
+                "severity": "high" if bmi >= 30 else "medium",
+                "advice": "체중의 5~7% 감량으로 당뇨 위험 58% 감소 가능",
+            })
+        if mf.get("HighChol", 0) == 1:
+            risk_factors.append({
+                "factor": "고콜레스테롤",
+                "field": "HighChol",
+                "severity": "medium",
+                "advice": "포화지방 줄이기 + 식이섬유 섭취 증가",
+            })
+        if mf.get("HeartDiseaseorAttack", 0) == 1:
+            risk_factors.append({
+                "factor": "심장질환 이력",
+                "field": "HeartDiseaseorAttack",
+                "severity": "high",
+                "advice": "정기적 심혈관 검진 + 저강도 운동",
+            })
+        if mf.get("GenHlth", 0) >= 4:
+            risk_factors.append({
+                "factor": "건강 상태 불량",
+                "field": "GenHlth",
+                "severity": "medium",
+                "advice": "소규모 생활습관 개선부터 시작",
+            })
+        if mf.get("DiffWalk", 0) == 1:
+            risk_factors.append({
+                "factor": "보행 어려움",
+                "field": "DiffWalk",
+                "severity": "medium",
+                "advice": "실내 스트레칭, 의자 운동부터 시작",
+            })
+        if mf.get("HvyAlcoholConsump", 0) == 1:
+            risk_factors.append({
+                "factor": "과음 습관",
+                "field": "HvyAlcoholConsump",
+                "severity": "medium",
+                "advice": "음주량 줄이기 — 남성 2잔, 여성 1잔 이내",
+            })
+
+        # severity 순서: high > medium > low
+        severity_order = {"high": 0, "medium": 1, "low": 2}
+        risk_factors.sort(key=lambda x: severity_order.get(x["severity"], 2))
+
+        return risk_factors[:3]
+
+    def _extract_risk_changes(self, user_context: dict) -> list:
+        """재예측 시 이전 결과와 비교하여 변화 요인 추출."""
+        prev = user_context.get("previous_prediction", {})
+        curr = user_context.get("model_features", {})
+
+        if not prev or not curr:
+            return []
+
+        changes = []
+        check_fields = {
+            "BMI": {"name": "BMI", "lower_is_better": True},
+            "HighBP": {"name": "고혈압", "lower_is_better": True},
+            "HighChol": {"name": "고콜레스테롤", "lower_is_better": True},
+            "GenHlth": {"name": "전반적 건강", "lower_is_better": True},
+            "DiffWalk": {"name": "보행 능력", "lower_is_better": True},
+            "HvyAlcoholConsump": {"name": "음주 습관", "lower_is_better": True},
+        }
+
+        for field, info in check_fields.items():
+            prev_val = prev.get(field)
+            curr_val = curr.get(field)
+            if prev_val is None or curr_val is None:
+                continue
+            if prev_val == curr_val:
+                continue
+
+            if info["lower_is_better"]:
+                improved = curr_val < prev_val
+            else:
+                improved = curr_val > prev_val
+
+            changes.append({
+                "factor": info["name"],
+                "previous": prev_val,
+                "current": curr_val,
+                "improved": improved,
+                "message": f"{info['name']}: {prev_val} → {curr_val} ({'개선' if improved else '주의 필요'})",
+            })
+
+        return changes
 
     def _build_filters(self, user_context: dict) -> MetadataFilter:
         """사용자 프로필 기반 메타데이터 필터 구성."""
