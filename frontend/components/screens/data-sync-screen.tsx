@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,11 +17,16 @@ import {
 import { cn } from "@/lib/utils";
 
 export function DataSyncScreen() {
-  const { setScreen } = useAppStore();
+  const { setScreen, dataSyncSettings, setDataSyncSettings } = useAppStore();
   const isScrolled = useScrollHeader();
 
-  const [healthDataEnabled, setHealthDataEnabled] = useState(true);
-  const [activityTrackingEnabled, setActivityTrackingEnabled] = useState(true);
+  const healthDataEnabled = dataSyncSettings?.healthData ?? true;
+  const activityTrackingEnabled = dataSyncSettings?.activityTracking ?? true;
+
+  const setHealthDataEnabled = (v: boolean) =>
+    setDataSyncSettings({ healthData: v, activityTracking: activityTrackingEnabled });
+  const setActivityTrackingEnabled = (v: boolean) =>
+    setDataSyncSettings({ healthData: healthDataEnabled, activityTracking: v });
 
   const allEnabled = healthDataEnabled && activityTrackingEnabled;
 

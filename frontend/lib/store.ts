@@ -63,6 +63,21 @@ interface AppState {
   onboardingStep: number;
   setOnboardingStep: (step: number) => void;
 
+  // 알림 설정
+  notificationSettings: {
+    mission: boolean;
+    event: boolean;
+    health: boolean;
+  } | null;
+  setNotificationSettings: (settings: { mission: boolean; event: boolean; health: boolean }) => void;
+
+  // 건강 데이터 연동 설정
+  dataSyncSettings: {
+    healthData: boolean;
+    activityTracking: boolean;
+  };
+  setDataSyncSettings: (settings: { healthData: boolean; activityTracking: boolean }) => void;
+
   resetApp: () => void;
 }
 
@@ -720,6 +735,12 @@ export const useAppStore = create<AppState>()(
 
       onboardingStep: 0,
       setOnboardingStep: (step) => set({ onboardingStep: step }),
+
+      notificationSettings: null,
+      setNotificationSettings: (settings) => set({ notificationSettings: settings }),
+
+      dataSyncSettings: { healthData: true, activityTracking: true },
+      setDataSyncSettings: (settings) => set({ dataSyncSettings: settings }),
 
       resetApp: () =>
         set({
