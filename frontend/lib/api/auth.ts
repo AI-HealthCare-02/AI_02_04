@@ -53,6 +53,19 @@ export async function refreshTokens(refreshToken: string): Promise<AuthResponse>
   return client.post<AuthResponse>("/auth/refresh", { refresh_token: refreshToken });
 }
 
-export async function checkEmail(email: string): Promise<{ success: boolean; message: string }> {
-  return client.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
+export interface CheckEmailResponse {
+  success: boolean;
+  data: {
+    available: boolean;
+  };
+}
+
+/**
+ * 이메일 중복 확인
+ * 백엔드 응답: { success: true, data: { available: true | false } }
+ */
+export async function checkEmail(email: string): Promise<CheckEmailResponse> {
+  return client.get<CheckEmailResponse>(
+    `/auth/check-email?email=${encodeURIComponent(email)}`,
+  );
 }
