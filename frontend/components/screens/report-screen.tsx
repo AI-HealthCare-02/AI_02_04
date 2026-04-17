@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { fetchWeeklyReport } from "@/lib/api";
 import type { WeeklyReportResponse } from "@/lib/api";
@@ -21,32 +21,28 @@ import { cn } from "@/lib/utils";
 
 const FALLBACK_SCORE = 85;
 
-const wordCloudData = [
-  { text: "샐러드",   size: "text-[22px]", healthy: true  },
-  { text: "라면",     size: "text-[18px]", healthy: false },
-  { text: "닭가슴살", size: "text-[20px]", healthy: true  },
-  { text: "믹스커피", size: "text-[15px]", healthy: false },
-  { text: "현미밥",   size: "text-[18px]", healthy: true  },
-  { text: "빵",       size: "text-[20px]", healthy: false },
-  { text: "아몬드",   size: "text-[15px]", healthy: true  },
-];
-
-const weekDayActivity = [
-  { day: "월", level: 1 },
-  { day: "화", level: 0 },
-  { day: "수", level: 0 },
-  { day: "목", level: 1 },
-  { day: "금", level: 1 },
-  { day: "토", level: 1 },
-  { day: "일", level: 1 },
-];
+// 건강한 식품 키워드 (간단 판별용)
+const HEALTHY_KEYWORDS = ["샐러드", "닭가슴살", "현미", "두부", "나물", "고구마", "아몬드", "견과", "채소", "브로콜리", "연어", "계란"];
 
 // 활동 레벨별 색상
 const activityColor = (level: number) =>
   level === 1 ? { bg: "#CBF891", text: "#3E8C28" } : { bg: "#F0F0F0", text: "#9B9B9B" };
 
+// 이번 주 월~일 날짜 범위 계산
+function getWeekLabel() {
+  const today = new Date();
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  const month = monday.getMonth() + 1;
+  // 이번 달의 몇 번째 주인지
+  const weekNum = Math.ceil(monday.getDate() / 7);
+  return `${month}월 ${weekNum}주차 분석 결과`;
+}
+
 export function ReportScreen() {
-  const { setScreen } = useAppStore();
+  const { setScreen, missions, dietEntries } = useAppStore();
   const isScrolled = useScrollHeader();
   const [missionAdjusted, setMissionAdjusted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -57,6 +53,59 @@ export function ReportScreen() {
       .then(setReportData)
       .catch(() => { /* API 실패 시 하드코딩 폴백 */ });
   }, []);
+
+  // 주간 날짜 라벨
+  const weekLabel = useMemo(() => getWeekLabel(), []);
+
+  // 이번 주 미션 완료 여부 → 요일별 활동량
+  // (당일 완료 미션 비율 기준: 50% 이상이면 활동 있음으로 표시)
+  const weekDayActivity = useMemo(() => {
+    const today = new Date();
+    const todayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const completedRatio = missions.length > 0
+      ? missions.filter((m) => m.completed).length / missions.length
+      : 0;
+    return ["월", "화", "수", "목", "금", "토", "일"].map((day, idx) => ({
+      day,
+      level: idx < todayIdx ? 1 : idx === todayIdx ? (completedRatio >= 0.5 ? 1 : 0) : 0,
+    }));
+  }, [missions]);
+
+  // 식단 항목 → 워드클라우드 (최근 7일 항목 기반)
+  const wordCloudData = useMemo(() => {
+    const SIZES = ["text-[22px]", "text-[20px]", "text-[18px]", "text-[15px]", "text-[13px]"];
+    if (dietEntries.length === 0) {
+      // 기록 없으면 기본 데이터
+      return [
+        { text: "샐러드",   size: SIZES[0], healthy: true  },
+        { text: "라면",     size: SIZES[1], healthy: false },
+        { text: "닭가슴살", size: SIZES[2], healthy: true  },
+        { text: "현미밥",   size: SIZES[3], healthy: true  },
+        { text: "빵",       size: SIZES[1], healthy: false },
+      ];
+    }
+    // 최근 7개 식단 항목을 워드클라우드로 변환
+    const recent = dietEntries.slice(-7);
+    return recent.map((entry, i) => ({
+      text: entry.name,
+      size: SIZES[Math.min(i, SIZES.length - 1)],
+      healthy: HEALTHY_KEYWORDS.some((k) => entry.name.includes(k)),
+    }));
+  }, [dietEntries]);
+
+  // 식단 영양소 평균 계산
+  const nutritionAvg = useMemo(() => {
+    if (dietEntries.length === 0) return { carbs: 50, protein: 30, fat: 20 };
+    const recent = dietEntries.slice(-7);
+    const total = recent.reduce(
+      (acc, e) => ({ carbs: acc.carbs + (e.carbs ?? 0), protein: acc.protein + (e.protein ?? 0) }),
+      { carbs: 0, protein: 0 },
+    );
+    const avgCarbs = Math.round(total.carbs / recent.length);
+    const avgProtein = Math.round(total.protein / recent.length);
+    const avgFat = Math.max(0, 100 - avgCarbs - avgProtein);
+    return { carbs: avgCarbs || 50, protein: avgProtein || 30, fat: avgFat || 20 };
+  }, [dietEntries]);
 
   const weeklyScore = reportData?.health_score ?? FALLBACK_SCORE;
   const aiBriefing = reportData?.ai_briefing ?? {
@@ -131,7 +180,7 @@ export function ReportScreen() {
             </Button>
             <div className="ms-1">
               <h1 className="text-[18px] font-bold text-[#3C3C3C]">주간 건강 리포트</h1>
-              <p className="text-[13px] text-[#7A7A7A] font-medium">3월 3주차 분석 결과</p>
+              <p className="text-[13px] text-[#7A7A7A] font-medium">{weekLabel}</p>
             </div>
           </div>
         </div>
@@ -172,7 +221,7 @@ export function ReportScreen() {
           </Button>
           <div className="ms-1">
             <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">주간 건강 리포트</h1>
-            <p className="text-[13px] text-[#7A7A7A] font-medium">3월 3주차 분석 결과</p>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">{weekLabel}</p>
           </div>
         </div>
       </div>
@@ -208,14 +257,15 @@ export function ReportScreen() {
             이번 주 건강 점수 {weeklyScore}점!
           </h2>
 
-          {/* 전주 대비 */}
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex items-center gap-1 text-[#3E8C28]">
-              <TrendingUp className="size-4" strokeWidth={2.5} />
-              <span className="text-[14px] font-bold">+5점</span>
+          {/* 전주 대비 — API에서 데이터 올 때만 표시 */}
+          {reportData?.health_score && (
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-1 text-[#3E8C28]">
+                <TrendingUp className="size-4" strokeWidth={2.5} />
+              </div>
+              <span className="text-[13px] text-[#7A7A7A] font-medium">이번 주 AI 분석 결과예요 📊</span>
             </div>
-            <span className="text-[13px] text-[#7A7A7A] font-medium">지난주보다 상승했어요 👏</span>
-          </div>
+          )}
 
           {/* 점수 범례 */}
           <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#F5F5F5] w-full justify-center">
@@ -349,9 +399,9 @@ export function ReportScreen() {
               {/* 범례 */}
               <div className="flex-1 space-y-2.5">
                 {[
-                  { label: "탄수화물", pct: 50, goal: 45, bg: "#FFF9D6", color: "#8C7010", dot: "#FFF383" },
-                  { label: "단백질",   pct: 30, goal: 30, bg: "#FFE4ED", color: "#C0305A", dot: "#FFB8CA" },
-                  { label: "지방",     pct: 20, goal: 25, bg: "#D6EEFF", color: "#2878B0", dot: "#AEE1F9" },
+                  { label: "탄수화물", pct: nutritionAvg.carbs,   goal: 45, bg: "#FFF9D6", color: "#8C7010", dot: "#FFF383" },
+                  { label: "단백질",   pct: nutritionAvg.protein, goal: 30, bg: "#FFE4ED", color: "#C0305A", dot: "#FFB8CA" },
+                  { label: "지방",     pct: nutritionAvg.fat,     goal: 25, bg: "#D6EEFF", color: "#2878B0", dot: "#AEE1F9" },
                 ].map((n) => (
                   <div key={n.label} className="flex items-center gap-2">
                     <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: n.dot }} />
