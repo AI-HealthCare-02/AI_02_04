@@ -19,6 +19,8 @@ export type {
   ReportType,
   AiBriefing,
   ChallengeRedesignSuggestion,
+  FailurePatternType,
+  FailurePattern,
   WeeklyReportResponse,
   // 캐릭터
   OverallState,

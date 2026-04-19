@@ -95,6 +95,24 @@ export interface AiBriefing {
 export interface ChallengeRedesignSuggestion {
   current_challenge: string;
   suggested_change: string;
+  /** 재설계 이유 (JSX 참조: reason 필드) */
+  reason?: string;
+}
+
+export type FailurePatternType =
+  | "day_based"
+  | "time_based"
+  | "streak_based"
+  | "trigger_based";
+
+export interface FailurePattern {
+  pattern_type: FailurePatternType;
+  /** 패턴 상세 설명 */
+  detail: string;
+  /** AI 권장 행동 */
+  suggested_action: string;
+  /** 확신도 0~1 */
+  confidence: number;
 }
 
 export interface WeeklyReportResponse {
@@ -105,6 +123,14 @@ export interface WeeklyReportResponse {
   ai_briefing?: AiBriefing;
   /** full 타입일 때만 존재 */
   challenge_redesign_suggestions?: ChallengeRedesignSuggestion[];
+  /** 이번 주 잘한 점 목록 */
+  achievements?: string[];
+  /** 실패 패턴 분석 (핵심 차별점) */
+  failure_patterns?: FailurePattern[];
+  /** 다음 주 전략 목록 */
+  next_week_strategy?: string[];
+  /** 전체 요약 */
+  summary?: string;
   /** mini/partial 타입에서 캐릭터 독려 메시지 */
   character_message?: string;
 }
