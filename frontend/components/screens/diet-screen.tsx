@@ -578,11 +578,11 @@ export function DietScreen() {
         {selectedEntry.health_notes &&
           selectedEntry.health_notes.length > 0 && (
             <div className="mx-5 mt-4 rounded-2xl bg-[#FFF9E6] border border-[#FFF383] px-4 py-3 space-y-1.5">
-              <p className="text-[11px] font-bold text-[#8C7010] uppercase tracking-[0.05em] mb-1">
+              <p className="text-[11px] font-bold text-[#EDA35A] uppercase tracking-[0.05em] mb-1">
                 건강 노트
               </p>
               {selectedEntry.health_notes.map((note, i) => (
-                <p key={i} className="text-[13px] text-[#8C7010] leading-snug">
+                <p key={i} className="text-[13px] text-[#EDA35A] leading-snug">
                   • {note}
                 </p>
               ))}

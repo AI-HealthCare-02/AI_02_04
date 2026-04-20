@@ -67,8 +67,8 @@ export function CollectionScreen() {
           </div>
           {/* 졸업 수 뱃지 */}
           <div className="flex items-center gap-1 bg-[#FFF383] rounded-full px-3 py-1.5">
-            <Star className="size-3.5 text-[#8C7010] fill-current" />
-            <span className="text-[13px] font-bold text-[#8C7010]">
+            <Star className="size-3.5 text-[#EDA35A] fill-current" />
+            <span className="text-[13px] font-bold text-[#EDA35A]">
               {graduatedCharacters.length}
             </span>
           </div>

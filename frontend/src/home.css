@@ -30,6 +30,18 @@
   );
   background-size: 14px 14px;
 }
+.bg-image:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+}
+.bg-image.default:before {
+  background: url(../public/bg-green.png) no-repeat center/ cover;
+}
 
 /* 옵션: 초록 테마 (밝은 배경에 사용) */
 .retro-scene-teal {
@@ -43,7 +55,7 @@
 }
 
 /* 하단 페이드 — 아래 콘텐츠와 자연스럽게 연결 */
-.retro-scene::after {
+/* .retro-scene::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -53,7 +65,7 @@
   background: linear-gradient(to bottom, transparent, #f9ffef);
   pointer-events: none;
   z-index: 1;
-}
+} */
 
 /* ──────────────────────────────────────────────────────────────
    2. 도형 공통 베이스
@@ -386,4 +398,43 @@
 /* ── 추천 카드 슬라이더 — 스크롤바 숨김 ─────────────────────── */
 .rec-slider::-webkit-scrollbar {
   display: none;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   픽셀 이미지
+────────────────────────────────────────────────────────────── */
+.img-flower-iv {
+  background: url(../public/img-flower-iv.png) no-repeat center/ cover;
+  width: 50px;
+  height: 50px;
+}
+.img_star_pr {
+  background: url(../public/img-star-pr.png) no-repeat center/ cover;
+  width: 50px;
+  height: 50px;
+}
+.img_star_brw {
+  background: url(../public/img-star-brw.png) no-repeat center/ cover;
+  width: 50px;
+  height: 50px;
+}
+.img_donut_mt {
+  background: url(../public/img-donut-mt.png) no-repeat center/ cover;
+  width: 20px;
+  height: 20px;
+}
+.img_mushroom_gn {
+  background: url(../public/img-mushroom-gn.png) no-repeat center/ cover;
+  width: 100px;
+  height: 100px;
+}
+.img_mushroom_bl {
+  background: url(../public/img-mushroom-bl.png) no-repeat center/ cover;
+  width: 60px;
+  height: 60px;
+}
+.img_puding_yw {
+  background: url(../public/img-puding-yw.png) no-repeat center/ cover;
+  width: 80px;
+  height: 80px;
 }
