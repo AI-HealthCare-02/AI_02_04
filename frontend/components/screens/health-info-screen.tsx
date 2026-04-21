@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BackendUserType } from "@/lib/types";
-import { registerUser } from "@/lib/api/auth";
-import { setAuthToken } from "@/lib/api/client";
+import { registerUser, checkEmail } from "@/lib/api/auth";
+import { setAuthToken, setRefreshToken } from "@/lib/api/client";
 
 /* ── 공통 섹션 라벨 ── */
 function SectionLabel({
@@ -190,21 +190,17 @@ export function HealthInfoScreen() {
     setIsEmailChecking(true);
     setEmailMessage("");
     try {
-      const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-      const res = await fetch(
-        `${BASE_URL}/auth/check-email?email=${encodeURIComponent(formData.email)}`,
-        {}
-      );
-      const json = await res.json();
-      if (json.data?.available) {
+      const res = await checkEmail(formData.email);
+      if (res.data?.available) {
         setEmailMessage("사용 가능한 이메일입니다.");
         setIsEmailChecked(true);
       } else {
         setEmailMessage("이미 사용 중인 이메일입니다.");
         setIsEmailChecked(false);
       }
-    } catch {
-      setEmailMessage("확인 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } catch (err: any) {
+      // 네트워크/서버 오류
+      setEmailMessage("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
       setIsEmailChecked(false);
     } finally {
       setIsEmailChecking(false);
@@ -279,6 +275,7 @@ export function HealthInfoScreen() {
       // 토큰 저장
       const { access_token, refresh_token } = res.data;
       setAuthToken(access_token);
+      setRefreshToken(refresh_token);
       setTokens(access_token, refresh_token);
       setIsAuthenticated(true);
 
@@ -305,7 +302,7 @@ export function HealthInfoScreen() {
         diabetesStatus: formData.diabetesStatus as any,
         healthGoal: "건강한 생활 습관 만들기",
         healthType: initialHealthType,
-        points: 0,
+        exp: 0,
         streak: 0,
         lastActiveDate: new Date(),
       });

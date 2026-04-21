@@ -11,7 +11,7 @@ import {
 import { Character } from "@/components/character";
 import {
   ArrowLeft,
-  Coins,
+  Zap,
   Check,
   Palette,
   Sparkles,
@@ -38,7 +38,7 @@ const categoryIcons: Record<Exclude<Category, "all">, React.ElementType> = {
 };
 
 export function ShopScreen() {
-  const { setScreen, userProfile, shopItems, purchaseItem, equipItem } =
+  const { setScreen, userProfile, character, shopItems, purchaseItem, equipItem } =
     useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState<Category>("all");
@@ -52,7 +52,7 @@ export function ShopScreen() {
       : shopItems.filter((item) => item.category === selectedCategory);
 
   const handlePurchase = (item: ShopItem) => {
-    if (userProfile && userProfile.points >= item.price && !item.owned) {
+    if (character && character.experience >= item.expCost && !item.owned) {
       purchaseItem(item.id);
       setShowPurchaseModal(false);
     }
@@ -79,13 +79,13 @@ export function ShopScreen() {
         <div className="flex-1">
           <h1 className="text-xl font-bold text-foreground">상점</h1>
           <p className="text-sm text-muted-foreground">
-            포인트로 아이템을 구매하세요
+            경험치로 아이템을 잠금 해제하세요
           </p>
         </div>
         <div className="flex items-center gap-1 bg-accent/50 rounded-full px-3 py-1.5">
-          <Coins className="w-4 h-4 text-amber-500" />
+          <Zap className="w-4 h-4 text-indigo-500" />
           <span className="font-semibold text-sm">
-            {userProfile?.points || 0}
+            {character?.experience || 0}
           </span>
         </div>
       </div>
@@ -177,9 +177,9 @@ export function ShopScreen() {
                     </span>
                     {!item.owned && (
                       <div className="flex items-center gap-1">
-                        <Coins className="w-3 h-3 text-amber-500" />
+                        <Zap className="w-3 h-3 text-indigo-500" />
                         <span className="text-sm font-semibold">
-                          {item.price}
+                          {item.expCost}
                         </span>
                       </div>
                     )}
@@ -220,16 +220,16 @@ export function ShopScreen() {
               <p className="text-[13px] text-[#7A7A7A] leading-normal mt-1">{selectedItem.description}</p>
 
               {/* 가격 */}
-              <div className="flex items-center justify-center gap-2 bg-[#FFF9A0] rounded-2xl px-5 py-3 mt-4">
-                <Coins className="size-5 text-[#8C7010]" />
-                <span className="text-[20px] font-black text-[#8C7010]">{selectedItem.price.toLocaleString()}</span>
-                <span className="text-[14px] font-bold text-[#8C7010]">P</span>
+              <div className="flex items-center justify-center gap-2 bg-[#EEF2FF] rounded-2xl px-5 py-3 mt-4">
+                <Zap className="size-5 text-[#6366F1]" />
+                <span className="text-[20px] font-black text-[#6366F1]">{selectedItem.expCost.toLocaleString()}</span>
+                <span className="text-[14px] font-bold text-[#6366F1]">XP</span>
               </div>
 
-              {/* 포인트 부족 경고 */}
-              {userProfile && userProfile.points < selectedItem.price && (
+              {/* 경험치 부족 경고 */}
+              {character && character.experience < selectedItem.expCost && (
                 <p className="text-[12px] font-semibold text-[#E53E3E] mt-2">
-                  포인트가 부족합니다 (보유: {userProfile.points.toLocaleString()}P)
+                  경험치가 부족합니다 (보유: {character.experience.toLocaleString()}XP)
                 </p>
               )}
 
@@ -244,10 +244,10 @@ export function ShopScreen() {
                 </Button>
                 <Button
                   className="flex-1 h-12 text-[14px] font-bold rounded-2xl"
-                  disabled={!userProfile || userProfile.points < selectedItem.price}
+                  disabled={!character || character.experience < selectedItem.expCost}
                   onClick={() => handlePurchase(selectedItem)}
                 >
-                  구매하기
+                  잠금 해제
                 </Button>
               </div>
             </>

@@ -45,7 +45,7 @@ export interface UserProfile {
 
   healthGoal: string;
   healthType: BackendUserType;
-  points: number;
+  exp: number;
   streak: number;
   lastActiveDate: Date;
 }
@@ -66,7 +66,7 @@ export interface Mission {
   inputType?: "none" | "text" | "number";
   target: number;
   current: number;
-  points: number;
+  exp: number;
   completed: boolean;
   icon: string;
 }
@@ -92,7 +92,7 @@ export interface ShopItem {
   name: string;
   description: string;
   category: "background" | "accessory" | "special";
-  price: number;
+  expCost: number;
   imageUrl: string;
   owned: boolean;
   equipped: boolean;
@@ -108,7 +108,7 @@ export interface GraduatedCharacter {
   finalStats: {
     totalSteps: number;
     totalMissions: number;
-    totalPoints: number;
+    totalExp: number;
   };
 }
 

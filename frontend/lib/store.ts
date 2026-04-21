@@ -37,7 +37,6 @@ interface AppState {
   userProfile: UserProfile | null;
   // ✨ 프로필 저장 시 맞춤형 미션도 함께 세팅되도록 변경
   setUserProfile: (profile: UserProfile) => void;
-  updatePoints: (points: number) => void;
 
   character: Character | null;
   setCharacter: (character: Character) => void;
@@ -64,6 +63,21 @@ interface AppState {
   onboardingStep: number;
   setOnboardingStep: (step: number) => void;
 
+  // 알림 설정
+  notificationSettings: {
+    mission: boolean;
+    event: boolean;
+    health: boolean;
+  } | null;
+  setNotificationSettings: (settings: { mission: boolean; event: boolean; health: boolean }) => void;
+
+  // 건강 데이터 연동 설정
+  dataSyncSettings: {
+    healthData: boolean;
+    activityTracking: boolean;
+  };
+  setDataSyncSettings: (settings: { healthData: boolean; activityTracking: boolean }) => void;
+
   resetApp: () => void;
 }
 
@@ -72,6 +86,8 @@ interface AppState {
 // ==========================================
 const generateMissionsForUser = (type: BackendUserType): Mission[] => {
   // 1. 전 유저 공통 미션
+  // ── 공통 미션 합계: 250 XP ──────────────────────────────
+  // 난이도 기준: hard(신체 활동/달성 어려움) > medium(습관형성) > easy(단순 체크)
   const commonMissions: Mission[] = [
     {
       id: "c1",
@@ -81,7 +97,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "walking",
       target: 10000,
       current: 0,
-      points: 100,
+      exp: 80, // hard — 자동 측정이지만 달성이 어려움
       completed: false,
       icon: "👟",
     },
@@ -93,7 +109,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "water",
       target: 8,
       current: 0,
-      points: 50,
+      exp: 35, // easy
       completed: false,
       icon: "💧",
     },
@@ -105,7 +121,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "exercise",
       target: 1,
       current: 0,
-      points: 80,
+      exp: 65, // medium
       completed: false,
       icon: "🏃",
     },
@@ -117,7 +133,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "sleep",
       target: 1,
       current: 0,
-      points: 50,
+      exp: 35, // easy
       completed: false,
       icon: "🛌",
     },
@@ -129,17 +145,17 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "diet",
       target: 1,
       current: 0,
-      points: 50,
+      exp: 35, // easy
       completed: false,
       icon: "🚫",
     },
-  ];
+  ]; // 소계: 80+35+65+35+35 = 250 XP
 
   let specificMissions: Mission[] = [];
 
-  // 2. 당뇨 환자(1형, 2형) 공통 미션
+  // ── 당뇨 공통 미션 합계: 100 XP ─────────────────────────
+  // 미션이 많아 개별 XP를 낮게 설정, 전용 미션 50 XP와 합산해 150 XP
   const diabeticCommonMissions: Mission[] = [
-    // ✨ type을 'manual'로, inputType을 'number'로 수정!
     {
       id: "db1",
       title: "공복 혈당 기록",
@@ -149,7 +165,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "health_record",
       target: 1,
       current: 0,
-      points: 70,
+      exp: 20, // medium — 매일 측정 습관
       completed: false,
       icon: "🩸",
     },
@@ -162,7 +178,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "health_record",
       target: 3,
       current: 0,
-      points: 100,
+      exp: 25, // medium — 3회 측정
       completed: false,
       icon: "🍽️",
     },
@@ -175,7 +191,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "health_record",
       target: 1,
       current: 0,
-      points: 50,
+      exp: 15, // easy
       completed: false,
       icon: "🌙",
     },
@@ -187,7 +203,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "diet",
       target: 3,
       current: 0,
-      points: 90,
+      exp: 15, // easy — 앱 사용 유도
       completed: false,
       icon: "📸",
     },
@@ -199,7 +215,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "exercise",
       target: 1,
       current: 0,
-      points: 60,
+      exp: 15, // medium
       completed: false,
       icon: "🚶",
     },
@@ -211,7 +227,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "medicine",
       target: 1,
       current: 0,
-      points: 30,
+      exp: 5, // easy — 단순 체크
       completed: false,
       icon: "🍬",
     },
@@ -224,12 +240,13 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
       category: "health_record",
       target: 1,
       current: 0,
-      points: 80,
+      exp: 5, // easy — 단순 체크
       completed: false,
       icon: "🦶",
     },
-  ];
+  ]; // 소계: 20+25+15+15+15+5+5 = 100 XP
   switch (type) {
+    // ── general_diet 전용: 150 XP ───────────────────────────
     case "general_diet":
       specificMissions = [
         {
@@ -240,7 +257,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 80,
+          exp: 60, // hard — 꾸준한 유산소 운동
           completed: false,
           icon: "🏃‍♀️",
         },
@@ -252,7 +269,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 3,
           current: 0,
-          points: 60,
+          exp: 35, // medium — 3회 기록
           completed: false,
           icon: "📸",
         },
@@ -264,7 +281,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 100,
+          exp: 40, // hard — AI 판정 기준 달성
           completed: false,
           icon: "🥗",
         },
@@ -276,12 +293,14 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 60,
+          exp: 15, // easy — 자기 통제
           completed: false,
           icon: "⏰",
         },
-      ];
+      ]; // 소계: 60+35+40+15 = 150 XP
       break;
+
+    // ── general_health 전용: 150 XP ──────────────────────────
     case "general_health":
       specificMissions = [
         {
@@ -292,7 +311,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 50,
+          exp: 50, // easy
           completed: false,
           icon: "🥬",
         },
@@ -304,7 +323,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 50,
+          exp: 50, // easy
           completed: false,
           icon: "🍎",
         },
@@ -316,12 +335,14 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 40,
+          exp: 50, // easy
           completed: false,
           icon: "🧘",
         },
-      ];
+      ]; // 소계: 50+50+50 = 150 XP
       break;
+
+    // ── general_fitness 전용: 150 XP ─────────────────────────
     case "general_fitness":
       specificMissions = [
         {
@@ -332,7 +353,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 100,
+          exp: 70, // hard — 고강도 운동
           completed: false,
           icon: "🏋️",
         },
@@ -344,7 +365,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 2,
           current: 0,
-          points: 80,
+          exp: 40, // medium
           completed: false,
           icon: "🥩",
         },
@@ -356,7 +377,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "sleep",
           target: 1,
           current: 0,
-          points: 60,
+          exp: 25, // easy
           completed: false,
           icon: "🛌",
         },
@@ -368,12 +389,14 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 40,
+          exp: 15, // easy
           completed: false,
           icon: "🧘‍♂️",
         },
-      ];
+      ]; // 소계: 70+40+25+15 = 150 XP
       break;
+
+    // ── at_risk 전용: 150 XP ─────────────────────────────────
     case "at_risk":
       specificMissions = [
         {
@@ -384,7 +407,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 70,
+          exp: 50, // medium
           completed: false,
           icon: "🚶",
         },
@@ -396,7 +419,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 90,
+          exp: 65, // hard — AI 판정 기준 달성
           completed: false,
           icon: "🍚",
         },
@@ -408,7 +431,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "health_record",
           target: 1,
           current: 0,
-          points: 50,
+          exp: 15, // easy
           completed: false,
           icon: "⚖️",
         },
@@ -420,12 +443,14 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 3,
           current: 0,
-          points: 80,
+          exp: 20, // medium
           completed: false,
           icon: "📊",
         },
-      ];
+      ]; // 소계: 50+65+15+20 = 150 XP
       break;
+
+    // ── diabetic_1 전용: 공통100 + 전용50 = 150 XP ──────────
     case "diabetic_1":
       specificMissions = [
         ...diabeticCommonMissions,
@@ -437,7 +462,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "medicine",
           target: 3,
           current: 0,
-          points: 100,
+          exp: 25, // hard — 매 끼니 투여 관리
           completed: false,
           icon: "💉",
         },
@@ -449,7 +474,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 3,
           current: 0,
-          points: 80,
+          exp: 15, // medium
           completed: false,
           icon: "⚖️",
         },
@@ -462,12 +487,14 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           inputType: "number",
           target: 1,
           current: 0,
-          points: 90,
+          exp: 10, // medium
           completed: false,
           icon: "📈",
         },
-      ];
+      ]; // 소계: 당뇨공통100 + 25+15+10 = 150 XP
       break;
+
+    // ── diabetic_2 전용: 공통100 + 전용50 = 150 XP ──────────
     case "diabetic_2":
       specificMissions = [
         ...diabeticCommonMissions,
@@ -479,11 +506,10 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "exercise",
           target: 1,
           current: 0,
-          points: 80,
+          exp: 20, // medium
           completed: false,
           icon: "🦵",
         },
-        // ✨ 체중 기록도 수동 입력창이 뜨도록 수정
         {
           id: "db2_2",
           title: "체중 기록",
@@ -493,7 +519,7 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "health_record",
           target: 1,
           current: 0,
-          points: 50,
+          exp: 10, // easy
           completed: false,
           icon: "⚖️",
         },
@@ -505,11 +531,11 @@ const generateMissionsForUser = (type: BackendUserType): Mission[] => {
           category: "diet",
           target: 1,
           current: 0,
-          points: 70,
+          exp: 20, // medium
           completed: false,
           icon: "🥐",
         },
-      ];
+      ]; // 소계: 당뇨공통100 + 20+10+20 = 150 XP
       break;
   }
 
@@ -523,7 +549,7 @@ const defaultShopItems: ShopItem[] = [
     name: "봄 정원",
     description: "꽃이 만발한 정원 배경",
     category: "background",
-    price: 200,
+    expCost: 200,
     imageUrl: "/backgrounds/spring-garden.png",
     owned: false,
     equipped: false,
@@ -534,7 +560,7 @@ const defaultShopItems: ShopItem[] = [
     name: "회복 물약",
     description: "캐릭터의 기분을 회복시켜요",
     category: "special",
-    price: 500,
+    expCost: 500,
     imageUrl: "/special/potion.png",
     owned: false,
     equipped: false,
@@ -569,16 +595,6 @@ export const useAppStore = create<AppState>()(
           missions: generateMissionsForUser(profile.healthType), // 미션 팩토리 실행!
         }),
 
-      updatePoints: (points) =>
-        set((state) => ({
-          userProfile: state.userProfile
-            ? {
-                ...state.userProfile,
-                points: state.userProfile.points + points,
-              }
-            : null,
-        })),
-
       character: null,
       setCharacter: (character) => set({ character }),
       updateCharacterMood: (mood) =>
@@ -592,10 +608,15 @@ export const useAppStore = create<AppState>()(
           let newLevel = state.character.level;
           let expToNext = state.character.experienceToNextLevel;
 
+          // 레벨별 필요 경험치 (하루 400 XP 기준, 15일 총 6000 XP로 Lv5 달성)
+          // Lv1→2: 800 XP (2일), Lv2→3: 1200 XP (3일),
+          // Lv3→4: 1600 XP (4일), Lv4→5: 2400 XP (6일)
+          const EXP_TABLE: Record<number, number> = { 1: 800, 2: 1200, 3: 1600, 4: 2400 };
+
           while (newExp >= expToNext && newLevel < 5) {
             newExp -= expToNext;
             newLevel = (newLevel + 1) as 1 | 2 | 3 | 4 | 5;
-            expToNext = newLevel * 200;
+            expToNext = EXP_TABLE[newLevel] ?? 2400;
           }
           return {
             character: {
@@ -647,8 +668,7 @@ export const useAppStore = create<AppState>()(
                 ? { ...state.character, mood: "happy" }
                 : state.character,
           }));
-          state.updatePoints(mission.points);
-          state.addExperience(mission.points / 2);
+          state.addExperience(mission.exp);
         }
       },
 
@@ -679,18 +699,18 @@ export const useAppStore = create<AppState>()(
         const item = state.shopItems.find((i) => i.id === itemId);
         if (
           item &&
-          state.userProfile &&
-          state.userProfile.points >= item.price &&
+          state.character &&
+          state.character.experience >= item.expCost &&
           !item.owned
         ) {
           set((state) => ({
             shopItems: state.shopItems.map((i) =>
               i.id === itemId ? { ...i, owned: true } : i,
             ),
-            userProfile: state.userProfile
+            character: state.character
               ? {
-                  ...state.userProfile,
-                  points: state.userProfile.points - item.price,
+                  ...state.character,
+                  experience: state.character.experience - item.expCost,
                 }
               : null,
           }));
@@ -716,6 +736,12 @@ export const useAppStore = create<AppState>()(
       onboardingStep: 0,
       setOnboardingStep: (step) => set({ onboardingStep: step }),
 
+      notificationSettings: null,
+      setNotificationSettings: (settings) => set({ notificationSettings: settings }),
+
+      dataSyncSettings: { healthData: true, activityTracking: true },
+      setDataSyncSettings: (settings) => set({ dataSyncSettings: settings }),
+
       resetApp: () =>
         set({
           currentScreen: "splash",
@@ -734,6 +760,24 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "healthy-friend-storage",
+      version: 2, // points → exp 마이그레이션
+      migrate: (persisted: any, fromVersion: number) => {
+        if (fromVersion < 2) {
+          // 캐시된 missions에 points 필드가 있으면 exp로 변환
+          if (Array.isArray(persisted.missions)) {
+            persisted.missions = persisted.missions.map((m: any) => ({
+              ...m,
+              exp: m.exp ?? m.points ?? 0,
+            }));
+          }
+          // userProfile.points → exp
+          if (persisted.userProfile && persisted.userProfile.points !== undefined) {
+            persisted.userProfile.exp = persisted.userProfile.exp ?? persisted.userProfile.points ?? 0;
+            delete persisted.userProfile.points;
+          }
+        }
+        return persisted;
+      },
       partialize: (state) => {
         const { currentScreen, isAuthenticated, ...rest } = state;
         return rest;

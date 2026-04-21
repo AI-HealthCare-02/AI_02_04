@@ -13,12 +13,14 @@ export type {
   // 추천
   CorrectionStatus,
   Recommendation,
-  RecommendationsRequest,
+  RecommendationsData,
   RecommendationsResponse,
   // 리포트
   ReportType,
   AiBriefing,
   ChallengeRedesignSuggestion,
+  FailurePatternType,
+  FailurePattern,
   WeeklyReportResponse,
   // 캐릭터
   OverallState,

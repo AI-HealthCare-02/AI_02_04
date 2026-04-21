@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAppStore } from "@/lib/store";
+import { analyzeDiet } from "@/lib/api/diet";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -72,6 +73,7 @@ export function DietScreen() {
 
   const [selectedEntry, setSelectedEntry] = useState<DietEntry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   /* ── ML API 추가 필드 ── */
   const [apiExtra, setApiExtra] = useState<{
@@ -112,44 +114,70 @@ export function DietScreen() {
     fat: Math.round((dailyCalories * 0.2) / 9),
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // 같은 파일 재선택 가능하도록 초기화
+    e.target.value = "";
+
+    // 기존 미리보기 URL 해제 후 새로 생성
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
     setAnalysisState("uploading");
     setApiExtra(null);
-    setTimeout(() => {
+    setAnalysisResult(null);
+
+    try {
       setAnalysisState("analyzing");
-      setTimeout(() => {
-        const mockResult: DietEntry = {
-          id: crypto.randomUUID(),
-          mealType: selectedMeal,
-          calories: 420,
-          carbs: 25,
-          protein: 31,
-          fat: 7,
-          feedback:
-            "단백질과 탄수화물이 다소 부족합니다. 다음 식사에서 조금 더 섭취해 주세요!",
-          timestamp: new Date(),
-        };
-        setAnalysisResult(mockResult);
-        setApiExtra({
-          food_name: "비빔밥",
-          diet_score: 80,
-          highlight: "carbs",
-          health_notes: ["나트륨 함량이 800mg으로 다소 높습니다."],
-          healthier_alternative: {
-            name: "메밀국수",
-            reason: "나트륨 60% 감소",
-          },
-          confidence: 0.85,
-          alternatives: [{ name: "돌솥비빔밥", confidence: 0.7 }],
-        });
-        setAnalysisState("complete");
-      }, 2000);
-    }, 1000);
+      const data = await analyzeDiet(file);
+
+      const entry: DietEntry = {
+        id: String(data.diet_id ?? crypto.randomUUID()),
+        mealType: selectedMeal,
+        calories: data.calories,
+        carbs: data.carbs,
+        protein: data.protein,
+        fat: 0, // 백엔드 응답에 fat 없음 → 0으로 처리
+        feedback: data.health_notes?.[0] ?? "",
+        timestamp: new Date(),
+      };
+      setAnalysisResult(entry);
+      setApiExtra({
+        food_name: data.food_name,
+        diet_score: data.diet_score,
+        highlight: data.highlight as "calories" | "protein" | "carbs",
+        health_notes: data.health_notes ?? [],
+        healthier_alternative: data.healthier_alternative ?? null,
+        confidence: data.classification?.confidence ?? 1,
+        alternatives: data.classification?.alternatives ?? [],
+      });
+      setAnalysisState("complete");
+    } catch (err: any) {
+      setAnalysisState("idle");
+      toast({
+        title: "분석 실패",
+        description:
+          err?.message ?? "사진 분석에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleManualSubmit = () => {
     if (!manualFoodName.trim()) return;
     setShowManualModal(false);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setAnalysisState("analyzing");
     setTimeout(() => {
       const mockResult: DietEntry = {
@@ -267,7 +295,13 @@ export function DietScreen() {
     }
   };
 
-  const openDetailView = (entry: DietEntry) => {
+  const openDetailView = (entry: DietEntry, keepPhoto = false) => {
+    if (!keepPhoto) {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    }
     setSelectedEntry(entry);
     setViewMode("detail");
   };
@@ -378,7 +412,7 @@ export function DietScreen() {
     const strokeDashoffset = circumference - (score / 100) * circumference;
 
     return (
-      <div className="min-h-screen bg-[#F9FFEF] pb-32 flex flex-col">
+      <div className="min-h-screen bg-[#FFFFFF] pb-32 flex flex-col">
         {/* ── 스크롤 시 나타나는 컴팩트 헤더 ── */}
         <ScrollHeader
           title={`${mealTypeLabels[selectedEntry.mealType]} 식단 분석`}
@@ -414,6 +448,19 @@ export function DietScreen() {
               <Trash2 className="size-5" />
             </Button>
           </div>
+        </div>
+
+        {/* 음식 사진 / 아이콘 */}
+        <div className="aspect-video mx-5 mt-4 rounded-2xl border border-black/[0.06] shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden bg-[#F9FFEF] flex items-center justify-center">
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="분석된 음식 사진"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Utensils className="size-16 text-[#CBF891]" />
+          )}
         </div>
 
         {/* 점수 요약 */}
@@ -528,18 +575,19 @@ export function DietScreen() {
         </div>
 
         {/* 건강 노트 */}
-        {selectedEntry.health_notes && selectedEntry.health_notes.length > 0 && (
-          <div className="mx-5 mt-4 rounded-2xl bg-[#FFF9E6] border border-[#FFF383] px-4 py-3 space-y-1.5">
-            <p className="text-[11px] font-bold text-[#8C7010] uppercase tracking-[0.05em] mb-1">
-              건강 노트
-            </p>
-            {selectedEntry.health_notes.map((note, i) => (
-              <p key={i} className="text-[13px] text-[#8C7010] leading-snug">
-                • {note}
+        {selectedEntry.health_notes &&
+          selectedEntry.health_notes.length > 0 && (
+            <div className="mx-5 mt-4 rounded-2xl bg-[#FFF9E6] border border-[#FFF383] px-4 py-3 space-y-1.5">
+              <p className="text-[11px] font-bold text-[#8C7010] uppercase tracking-[0.05em] mb-1">
+                건강 노트
               </p>
-            ))}
-          </div>
-        )}
+              {selectedEntry.health_notes.map((note, i) => (
+                <p key={i} className="text-[13px] text-[#8C7010] leading-snug">
+                  • {note}
+                </p>
+              ))}
+            </div>
+          )}
 
         {/* 대안 음식 */}
         {selectedEntry.healthier_alternative && (
@@ -736,6 +784,15 @@ export function DietScreen() {
           ))}
         </div>
 
+        {/* ── 숨겨진 파일 input (카메라 + 앨범 공용) ── */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
         {/* ── 업로드 / 분석 상태 영역 ── */}
         {analysisState === "idle" && (
           <div className="bg-white rounded-3xl border-2 border-dashed border-[#CBF891] p-8 flex flex-col items-center text-center gap-5">
@@ -757,14 +814,26 @@ export function DietScreen() {
               </p>
             </div>
             <div className="flex gap-2.5 w-full">
+              {/* 촬영하기: 카메라 앱 우선 열기 */}
               <Button
-                onClick={handleUpload}
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.setAttribute("capture", "environment");
+                    fileInputRef.current.click();
+                  }
+                }}
                 className="flex-1 rounded-2xl font-bold"
               >
                 <Camera className="size-4 mr-1.5" /> 촬영하기
               </Button>
+              {/* 앨범에서: capture 없이 갤러리 열기 */}
               <Button
-                onClick={handleUpload}
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.removeAttribute("capture");
+                    fileInputRef.current.click();
+                  }
+                }}
                 variant="outline"
                 className="flex-1 rounded-2xl font-bold border-[#CBF891] text-[#3E8C28] hover:bg-[#F9FFEF]"
               >
@@ -854,12 +923,17 @@ export function DietScreen() {
               </button>
             </div>
 
-            {/* 이미지 플레이스홀더 */}
-            <div
-              className="mx-5 mt-4 aspect-video rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: "#F9FFEF" }}
-            >
-              <Utensils className="size-12 text-[#CBF891]" />
+            {/* 음식 사진 */}
+            <div className="mx-5 mt-4 aspect-video rounded-2xl overflow-hidden bg-[#F9FFEF] flex items-center justify-center">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="분석된 음식 사진"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Utensils className="size-12 text-[#CBF891]" />
+              )}
             </div>
 
             {/* 영양 수치 그리드 — highlight 필드에 해당하는 칩 강조 */}
