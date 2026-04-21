@@ -17,8 +17,9 @@ async def get_recommendations(
     user_id = current_user["user_id"]
     user_type = current_user.get("payload",{}).get("user_type")
     goal = current_user.get("payload",{}).get("goal")
-    risk_level = current_user.get("payload",{}).get("risk_level")
-    diabetes_type = current_user.get("payload",{}).get("diabetes_type")
+    # 나중에 좀더 세밀하게 분류할떄 사용할듯??
+    # risk_level = current_user.get("payload",{}).get("risk_level")
+    # diabetes_type = current_user.get("payload",{}).get("diabetes_type")
 
     user = db.query(User).filter(
         User.id == user_id

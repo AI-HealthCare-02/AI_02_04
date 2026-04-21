@@ -83,6 +83,28 @@ jobs:
           -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
           -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
           --push .
+
+      - name: Run DB Migration
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster dangmago-backend \
+            --task-definition dangmago-migrate \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-09a70b69d7391f5f4,subnet-045071261f2f4e1a3,subnet-02ab81afd1c8e05ab,subnet-07bd1132b11cfed4a],securityGroups=[sg-0097b1a1de2b2e5fb],assignPublicIp=ENABLED}" \
+            --region ap-northeast-2 \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Migration task ARN: $TASK_ARN"
+
+          # 마이그레이션 완료까지 대기
+          aws ecs wait tasks-stopped \
+            --cluster dangmago-backend \
+            --tasks $TASK_ARN \
+            --region ap-northeast-2
+
+          echo "Migration completed"
+
       - name: Deploy to ECS
         run: |
           aws ecs update-service \

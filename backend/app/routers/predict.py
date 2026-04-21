@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Header
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -52,3 +52,38 @@ def get_predict_history(
             for p in predictions
         ],
     }
+
+
+
+@router.post('/batch')
+def predict_batch(
+        x_internal_key: str = Header(..., alias="X-Internal-Key"),
+        db: Session = Depends(get_db)
+):
+    if x_internal_key != settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code =403, detail="권한 없음")
+    
+    users = db.query(User).all()
+
+    results = []
+
+    for user in users:
+        try:
+            result = predict_services.predict_diabetes_risk(user)
+            prediction = DiabetesPrediction(
+                user_id = user.id,
+                risk_score =result["risk_score"],
+                risk_level =result["risk_level"] 
+            )
+            db.add(prediction)
+
+            results.append({"user_id": user.id, "status": "success"})
+        except Exception as e:
+            results.append({"user_id": user.id, "status": "failed", "error": str(e)})
+        
+    db.commit()
+
+    return {
+            "success":True,
+            "data"  : results
+        }

@@ -76,3 +76,5 @@ class User(Base, TimestampMixin):
     character = relationship("Character", back_populates="user", uselist=False)
     points = relationship("Point", back_populates="user", uselist=False)
     point_history = relationship("PointHistory", back_populates="user")
+
+    weekly_reports = relationship("WeeklyReport", back_populates="user")
