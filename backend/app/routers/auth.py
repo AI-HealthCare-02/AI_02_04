@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 import httpx
 
+from app.core.limiter import limiter
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.schemas.auth import (
@@ -22,7 +23,8 @@ router = APIRouter()
 
 
 @router.post("/register", status_code=201)
-def register(data: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db)):
     try:
         user = auth_service.register_user(db, data)
     except ValueError as err:
@@ -49,7 +51,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
 
     try:
         user = auth_service.signin_user(db, data.email, data.password)

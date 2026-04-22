@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException,Header
+from fastapi import APIRouter, Depends, HTTPException,Header, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.services import predict as predict_services
+from app.core.limiter import limiter
 
 router = APIRouter()
 
 
 @router.post("")
+@limiter.limit("10/minute")
 def predict(
+    request:Request,
     current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.id == current_user["user_id"]).first()
