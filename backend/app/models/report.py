@@ -9,4 +9,4 @@ class WeeklyReport(Base, TimestampMixin):
     report_content = Column(JSON, nullable=False)  
     week_start = Column(DateTime, nullable=False)     
     
-    user = relationship("User", back_populates="weekly_report")
+    user = relationship("User", back_populates="weekly_reports")
