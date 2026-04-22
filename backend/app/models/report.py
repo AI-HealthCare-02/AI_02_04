@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, JSON, ForeignKey,DateTime
 from sqlalchemy.orm import relationship
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base, TimestampMixin
 
 class WeeklyReport(Base, TimestampMixin):
     __tablename__ = "weekly_reports"
