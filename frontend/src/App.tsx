@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   setAuthToken,
   setRefreshToken,
@@ -67,6 +68,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <main className="min-h-screen max-w-md mx-auto bg-background relative overflow-hidden">
       {currentScreen !== "splash" && currentScreen !== "login" && (
         <button
@@ -103,5 +105,6 @@ export default function App() {
 
       <Toaster />
     </main>
+    </ErrorBoundary>
   );
 }
