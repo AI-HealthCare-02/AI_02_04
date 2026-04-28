@@ -35,3 +35,4 @@ lightgbm==4.3.0
 
 
 slowapi
+redis[asyncio]

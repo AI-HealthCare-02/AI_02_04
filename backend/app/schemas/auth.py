@@ -25,8 +25,8 @@ class RegisterRequest(BaseModel):
     exercise_freq: Optional[int] = None
     fruit_intake: Optional[bool] = None
     veggie_intake: Optional[bool] = None
-    occupation: Optional[bool] = None
 
+    occupation: Optional[str] = None
 
 class KakaoRegisterRequest(BaseModel):
     kakao_id: str
@@ -48,8 +48,8 @@ class KakaoRegisterRequest(BaseModel):
     exercise_freq: Optional[int] = None
     fruit_intake: Optional[bool] = None
     veggie_intake: Optional[bool] = None
-    occupation: Optional[bool] = None
 
+    occupation: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr

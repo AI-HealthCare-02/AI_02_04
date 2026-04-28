@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
+from app.core.redis import is_blacklisted
 from app.core.config import settings
 from app.core.database import get_db
 
@@ -10,7 +11,7 @@ from app.core.database import get_db
 security = HTTPBearer()
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
@@ -28,6 +29,10 @@ def get_current_user(
         )
         user_id: str = payload.get("sub") #type:ignore
         if user_id is None:
+            raise credentials_exception
+      
+        token = credentials.credentials
+        if await is_blacklisted(token):
             raise credentials_exception
 
     except JWTError:
