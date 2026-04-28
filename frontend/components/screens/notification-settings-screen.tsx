@@ -1,43 +1,118 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { AlertModal } from "@/components/ui/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollHeader } from "@/components/ui/scroll-header";
 import { useScrollHeader } from "@/hooks/use-scroll-header";
 import {
   ArrowLeft,
   Bell,
   BellOff,
-  CheckCircle2,
   Settings,
   Megaphone,
   Gift,
   HeartPulse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export function NotificationSettingsScreen() {
-  const { setScreen } = useAppStore();
+  const { setScreen, notificationSettings, setNotificationSettings } = useAppStore();
   const isScrolled = useScrollHeader();
+  const { toast } = useToast();
 
-  const [systemPushEnabled,  setSystemPushEnabled]  = useState(false);
-  const [eventPushEnabled,   setEventPushEnabled]   = useState(false);
-  const [missionPushEnabled, setMissionPushEnabled] = useState(false);
-  const [healthPushEnabled,  setHealthPushEnabled]  = useState(false);
+  // 브라우저 알림 권한 상태
+  const [permission, setPermission] = useState<NotificationPermission>("default");
   const [showPermissionAlert, setShowPermissionAlert] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  // Zustand에서 설정 불러오기 (없으면 기본값)
+  const settings = notificationSettings ?? {
+    mission: false,
+    event: false,
+    health: false,
+  };
+
+  // 마운트 시 현재 권한 상태 확인
+  useEffect(() => {
+    if ("Notification" in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  const systemEnabled = permission === "granted";
+
+  // 실제 Web Notification API 권한 요청
+  const requestPermission = async () => {
+    if (!("Notification" in window)) {
+      toast({ title: "이 브라우저는 알림을 지원하지 않습니다." });
+      return;
+    }
+    setIsRequesting(true);
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result === "granted") {
+        toast({ title: "✅ 알림 권한이 허용됐어요!" });
+        // 기본 알림 활성화
+        setNotificationSettings({ mission: true, event: false, health: true });
+        // 웰컴 알림 발송
+        new Notification("당마고치 알림 활성화 🔔", {
+          body: "이제 미션 알림과 건강 리포트를 받을 수 있어요!",
+          icon: "/favicon.ico",
+        });
+      } else if (result === "denied") {
+        toast({ title: "알림 권한이 거부됐어요. 브라우저 설정에서 변경해주세요." });
+      }
+    } catch {
+      toast({ title: "알림 권한 요청 중 오류가 발생했어요." });
+    } finally {
+      setIsRequesting(false);
+      setShowPermissionAlert(false);
+    }
+  };
+
+  const handleToggle = (key: keyof typeof settings, value: boolean) => {
+    if (!systemEnabled) return;
+    setNotificationSettings({ ...settings, [key]: value });
+  };
+
+  const notificationItems = [
+    {
+      key: "mission" as const,
+      icon: HeartPulse,
+      iconBg: systemEnabled && settings.mission ? "#FFB8CA" : "#F5F5F5",
+      iconColor: systemEnabled && settings.mission ? "#C0305A" : "#C8C8C8",
+      label: "미션 알림",
+      desc: "오늘의 미션 시작 및 달성 알림",
+    },
+    {
+      key: "event" as const,
+      icon: Megaphone,
+      iconBg: systemEnabled && settings.event ? "#FFF383" : "#F5F5F5",
+      iconColor: systemEnabled && settings.event ? "#8C7010" : "#C8C8C8",
+      label: "이벤트 및 혜택 알림",
+      desc: "앱 푸시 이벤트·프로모션 정보",
+    },
+    {
+      key: "health" as const,
+      icon: Gift,
+      iconBg: systemEnabled && settings.health ? "#CBF891" : "#F5F5F5",
+      iconColor: systemEnabled && settings.health ? "#3E8C28" : "#C8C8C8",
+      label: "건강 리포트 알림",
+      desc: "주간 리포트 발행 시 알림",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-12">
-      {/* ── 스크롤 컴팩트 헤더 ── */}
       <ScrollHeader
         title="맞춤형 푸시 알림"
         onBack={() => setScreen("mypage")}
         visible={isScrolled}
       />
 
-      {/* ── 기본 헤더 ── */}
       <div className="bg-white border-b border-black/[0.06]">
         <div className="flex items-center gap-1 px-4 pt-12 pb-4">
           <Button
@@ -56,18 +131,16 @@ export function NotificationSettingsScreen() {
       </div>
 
       <div className="px-5 pt-5 space-y-4">
-
-        {/* ── 시스템 알림 상태 카드 ── */}
+        {/* 시스템 알림 상태 카드 */}
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5">
           <div className="flex items-center gap-4">
-            {/* 상태 아이콘 */}
             <div
               className={cn(
                 "size-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
-                systemPushEnabled ? "bg-[#CBF891]" : "bg-[#F5F5F5]",
+                systemEnabled ? "bg-[#CBF891]" : "bg-[#F5F5F5]",
               )}
             >
-              {systemPushEnabled ? (
+              {systemEnabled ? (
                 <Bell className="size-7 text-[#3E8C28]" />
               ) : (
                 <BellOff className="size-7 text-[#C8C8C8]" />
@@ -80,76 +153,66 @@ export function NotificationSettingsScreen() {
                 <span
                   className={cn(
                     "text-[11px] font-bold px-2 py-0.5 rounded-full",
-                    systemPushEnabled
+                    systemEnabled
                       ? "bg-[#CBF891] text-[#3E8C28]"
-                      : "bg-[#F5F5F5] text-[#9B9B9B]",
+                      : permission === "denied"
+                        ? "bg-[#FFB8CA] text-[#C0305A]"
+                        : "bg-[#F5F5F5] text-[#9B9B9B]",
                   )}
                 >
-                  {systemPushEnabled ? "허용됨" : "꺼짐"}
+                  {systemEnabled ? "허용됨" : permission === "denied" ? "거부됨" : "꺼짐"}
                 </span>
               </div>
               <p className="text-[12px] text-[#9B9B9B] font-medium">
-                {systemPushEnabled
+                {systemEnabled
                   ? "알림을 받을 준비가 됐어요"
-                  : "아래 버튼으로 알림 권한을 허용해 주세요"}
+                  : permission === "denied"
+                    ? "브라우저 설정에서 직접 허용해주세요"
+                    : "아래 버튼으로 알림 권한을 허용해 주세요"}
               </p>
             </div>
           </div>
 
-          {/* 권한 설정 버튼 */}
-          {!systemPushEnabled && (
+          {/* 권한 요청 버튼 */}
+          {!systemEnabled && permission !== "denied" && (
+            <button
+              className="mt-4 w-full h-12 rounded-2xl bg-[#CBF891] hover:bg-[#B5E87A] flex items-center justify-center gap-2 text-[14px] font-bold text-[#2A5C34] transition-colors disabled:opacity-50"
+              onClick={() => setShowPermissionAlert(true)}
+              disabled={isRequesting}
+            >
+              <Bell className="size-4" />
+              {isRequesting ? "권한 요청 중..." : "알림 허용하기"}
+            </button>
+          )}
+
+          {/* 거부됐을 때 브라우저 설정 안내 */}
+          {permission === "denied" && (
             <button
               className="mt-4 w-full h-12 rounded-2xl bg-[#F0F0F0] hover:bg-[#E4E4E4] flex items-center justify-center gap-2 text-[14px] font-bold text-[#3C3C3C] transition-colors"
-              onClick={() => setShowPermissionAlert(true)}
+              onClick={() => {
+                toast({ title: "브라우저 주소창 옆 🔒 아이콘 → 알림 → 허용으로 변경해주세요." });
+              }}
             >
               <Settings className="size-4" />
-              권한 설정 하러 가기
+              브라우저 설정 안내 보기
             </button>
           )}
         </div>
 
-        {/* ── 알림 종류별 설정 ── */}
+        {/* 알림 종류별 설정 */}
         <div>
           <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em] mb-3 px-1">
             알림 종류
           </p>
 
           <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            {[
-              {
-                icon: HeartPulse,
-                iconBg: systemPushEnabled && missionPushEnabled ? "#FFB8CA" : "#F5F5F5",
-                iconColor: systemPushEnabled && missionPushEnabled ? "#C0305A" : "#C8C8C8",
-                label: "미션 알림",
-                desc: "오늘의 미션 시작 및 달성 알림",
-                checked: missionPushEnabled,
-                onChange: setMissionPushEnabled,
-              },
-              {
-                icon: Megaphone,
-                iconBg: systemPushEnabled && eventPushEnabled ? "#FFF383" : "#F5F5F5",
-                iconColor: systemPushEnabled && eventPushEnabled ? "#8C7010" : "#C8C8C8",
-                label: "이벤트 및 혜택 알림",
-                desc: "앱 푸시 이벤트·프로모션 정보",
-                checked: eventPushEnabled,
-                onChange: setEventPushEnabled,
-              },
-              {
-                icon: Gift,
-                iconBg: systemPushEnabled && healthPushEnabled ? "#CBF891" : "#F5F5F5",
-                iconColor: systemPushEnabled && healthPushEnabled ? "#3E8C28" : "#C8C8C8",
-                label: "건강 리포트 알림",
-                desc: "주간 리포트 발행 시 알림",
-                checked: healthPushEnabled,
-                onChange: setHealthPushEnabled,
-              },
-            ].map((item, idx) => (
-              <div key={item.label}>
+            {notificationItems.map((item, idx) => (
+              <div key={item.key}>
                 {idx > 0 && <div className="h-px bg-[#F5F5F5] mx-5" />}
                 <div
                   className={cn(
                     "flex items-center gap-3.5 px-5 py-4 transition-colors",
-                    !systemPushEnabled && "opacity-40 pointer-events-none",
+                    !systemEnabled && "opacity-40 pointer-events-none",
                   )}
                 >
                   <div
@@ -163,17 +226,16 @@ export function NotificationSettingsScreen() {
                     <p className="text-[12px] text-[#9B9B9B] font-medium mt-0.5">{item.desc}</p>
                   </div>
                   <Switch
-                    checked={item.checked}
-                    onCheckedChange={item.onChange}
-                    disabled={!systemPushEnabled}
+                    checked={settings[item.key]}
+                    onCheckedChange={(v) => handleToggle(item.key, v)}
+                    disabled={!systemEnabled}
                   />
                 </div>
               </div>
             ))}
           </div>
 
-          {/* 시스템 권한 안내 */}
-          {!systemPushEnabled && (
+          {!systemEnabled && (
             <div className="flex items-center gap-2 mt-3 px-2">
               <div className="size-1.5 rounded-full bg-[#C0305A] shrink-0" />
               <p className="text-[12px] text-[#9B9B9B] font-medium">
@@ -183,17 +245,17 @@ export function NotificationSettingsScreen() {
           )}
         </div>
 
-        {/* ── 알림 수신 현황 요약 ── */}
-        {systemPushEnabled && (
+        {/* 수신 현황 요약 */}
+        {systemEnabled && (
           <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5">
             <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em] mb-3">
               현재 수신 중인 알림
             </p>
             <div className="space-y-2">
               {[
-                { label: "미션 알림",        enabled: missionPushEnabled, color: "#C0305A", bg: "#FFB8CA" },
-                { label: "이벤트 및 혜택",   enabled: eventPushEnabled,   color: "#8C7010", bg: "#FFF383" },
-                { label: "건강 리포트",      enabled: healthPushEnabled,  color: "#3E8C28", bg: "#CBF891" },
+                { label: "미션 알림",      enabled: settings.mission, color: "#C0305A", bg: "#FFB8CA" },
+                { label: "이벤트 및 혜택", enabled: settings.event,   color: "#8C7010", bg: "#FFF383" },
+                { label: "건강 리포트",    enabled: settings.health,  color: "#3E8C28", bg: "#CBF891" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -220,24 +282,22 @@ export function NotificationSettingsScreen() {
             </div>
           </div>
         )}
-
       </div>
 
-      {/* ── 권한 안내 알림 모달 ── */}
-      <AlertModal
+      {/* 권한 확인 모달 */}
+      <ConfirmDialog
         open={showPermissionAlert}
         onOpenChange={(open) => {
-          if (!open) {
-            setShowPermissionAlert(false);
-            setTimeout(() => setSystemPushEnabled(true), 300);
-          }
+          if (!open) setShowPermissionAlert(false);
         }}
         icon={Bell}
         iconBg="#CBF891"
         iconColor="#3E8C28"
-        title="시스템 설정으로 이동합니다"
-        description="시뮬레이션: 확인을 누르면 알림 권한이 허용됩니다."
-        confirmLabel="확인"
+        title="알림 권한을 허용할게요"
+        description="브라우저가 알림 허용 여부를 물어볼 거예요. '허용'을 눌러주세요."
+        confirmLabel="허용하기"
+        cancelLabel="취소"
+        onConfirm={requestPermission}
       />
     </div>
   );

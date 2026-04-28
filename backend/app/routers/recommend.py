@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status,Query
+from fastapi import APIRouter, Depends, HTTPException, status,Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 
+from app.core.limiter import limiter
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -10,7 +11,9 @@ from app.services.ai.recommendation_engine import RecommendationEngine
 router = APIRouter()
 
 @router.post("")
+@limiter.limit("1/minute")
 async def get_recommendations(
+    request:Request,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -382,3 +382,8 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(6px);
 }
+
+/* ── 추천 카드 슬라이더 — 스크롤바 숨김 ─────────────────────── */
+.rec-slider::-webkit-scrollbar {
+  display: none;
+}

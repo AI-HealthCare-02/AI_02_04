@@ -15,7 +15,7 @@ import {
   LogOut,
   UserMinus,
   TriangleAlert,
-  Coins,
+  Zap,
   Target,
   Trophy,
   TrendingUp,
@@ -213,12 +213,12 @@ export function MyPageScreen() {
             <div className="grid grid-cols-3 px-5 py-4">
               {[
                 {
-                  icon: Coins,
-                  iconColor: "#8C7010",
-                  iconBg: "#FFF9D6",
-                  value: (userProfile?.points ?? 0).toLocaleString(),
-                  unit: "P",
-                  label: "누적 포인트",
+                  icon: Zap,
+                  iconColor: "#6366F1",
+                  iconBg: "#EEF2FF",
+                  value: (character?.experience ?? 0).toLocaleString(),
+                  unit: "XP",
+                  label: "누적 경험치",
                 },
                 {
                   icon: Target,

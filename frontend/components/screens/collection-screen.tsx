@@ -3,18 +3,14 @@ import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { ScrollHeader } from "@/components/ui/scroll-header";
 import { useScrollHeader } from "@/hooks/use-scroll-header";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Character } from "@/components/character";
 import {
   ArrowLeft,
   Star,
   Calendar,
   Award,
-  Coins,
+  Zap,
   Sparkles,
   Rocket,
   Trophy,
@@ -62,8 +58,12 @@ export function CollectionScreen() {
             <ArrowLeft className="size-5" />
           </Button>
           <div className="ms-1 flex-1">
-            <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">추억 보관함</h1>
-            <p className="text-[13px] text-[#7A7A7A] font-medium">별나라로 떠난 친구들</p>
+            <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">
+              추억 보관함
+            </h1>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">
+              별나라로 떠난 친구들
+            </p>
           </div>
           {/* 졸업 수 뱃지 */}
           <div className="flex items-center gap-1 bg-[#FFF383] rounded-full px-3 py-1.5">
@@ -80,7 +80,9 @@ export function CollectionScreen() {
         {character && (
           <div className="bg-white rounded-3xl border border-black/[0.06] shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
             <div className="p-5">
-              <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em] mb-4">현재 캐릭터</p>
+              <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em] mb-4">
+                현재 캐릭터
+              </p>
               <div className="flex items-center gap-4">
                 <Character
                   mood={character.mood}
@@ -90,7 +92,9 @@ export function CollectionScreen() {
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-[16px] font-bold text-[#3C3C3C]">{character.name}</h3>
+                    <h3 className="text-[16px] font-bold text-[#3C3C3C]">
+                      {character.name}
+                    </h3>
                     <span className="text-[11px] font-bold bg-[#CBF891] text-[#3E8C28] px-2 py-0.5 rounded-full">
                       현재
                     </span>
@@ -105,7 +109,8 @@ export function CollectionScreen() {
                       {Math.floor(
                         (Date.now() - new Date(character.createdAt).getTime()) /
                           (1000 * 60 * 60 * 24),
-                      )}일째
+                      )}
+                      일째
                     </span>
                   </div>
                 </div>
@@ -126,7 +131,8 @@ export function CollectionScreen() {
             {canGraduate && (
               <div className="mx-5 mb-5 px-4 py-3 bg-[#FFF9D6] rounded-2xl border border-[#FFF383]">
                 <p className="text-[12px] font-bold text-[#8C6010] text-center">
-                  🎉 축하해요! {character.name}이(가) 별나라로 떠날 준비가 됐어요!
+                  🎉 축하해요! {character.name}이(가) 별나라로 떠날 준비가
+                  됐어요!
                 </p>
               </div>
             )}
@@ -137,7 +143,9 @@ export function CollectionScreen() {
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <Star className="size-4 text-[#8C7010] fill-[#FFF383]" />
-            <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">별나라의 친구들</p>
+            <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">
+              별나라의 친구들
+            </p>
           </div>
 
           {graduatedCharacters.length === 0 ? (
@@ -147,9 +155,13 @@ export function CollectionScreen() {
                 <Star className="size-8 text-[#D97706]" />
               </div>
               <div>
-                <p className="text-[15px] font-bold text-[#3C3C3C] mb-1">아직 졸업한 친구가 없어요</p>
+                <p className="text-[15px] font-bold text-[#3C3C3C] mb-1">
+                  아직 졸업한 친구가 없어요
+                </p>
                 <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
-                  캐릭터를 레벨 5까지 키워서<br />별나라로 보내보세요!
+                  캐릭터를 레벨 5까지 키워서
+                  <br />
+                  별나라로 보내보세요!
                 </p>
               </div>
             </div>
@@ -165,19 +177,28 @@ export function CollectionScreen() {
                   }}
                 >
                   <div className="relative mb-3">
-                    <Character mood="happy" level={5} size="sm" showPlatform={false} />
+                    <Character
+                      mood="happy"
+                      level={5}
+                      size="sm"
+                      showPlatform={false}
+                    />
                     <div className="absolute -top-1 -right-1 size-6 bg-[#FFC107] rounded-full flex items-center justify-center shadow-sm">
                       <Star className="size-3 text-white fill-current" />
                     </div>
                   </div>
-                  <p className="text-[14px] font-bold text-[#3C3C3C]">{char.name}</p>
-                  <p className="text-[11px] font-medium text-[#9B9B9B] mt-0.5">{char.totalDays}일 함께함</p>
+                  <p className="text-[14px] font-bold text-[#3C3C3C]">
+                    {char.name}
+                  </p>
+                  <p className="text-[11px] font-medium text-[#9B9B9B] mt-0.5">
+                    {char.totalDays}일 함께함
+                  </p>
                   <div className="flex items-center gap-1.5 mt-2">
                     <span className="text-[10px] font-bold bg-[#CBF891] text-[#3E8C28] px-2 py-0.5 rounded-full">
                       Lv.5
                     </span>
                     <span className="text-[10px] font-bold bg-[#FFF383] text-[#8C7010] px-2 py-0.5 rounded-full">
-                      {char.finalStats.totalPoints}P
+                      {char.finalStats.totalExp}XP
                     </span>
                   </div>
                 </button>
@@ -199,7 +220,9 @@ export function CollectionScreen() {
 
           <DialogTitle className="text-center">별나라 졸업식 🌟</DialogTitle>
           <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
-            함께 한 시간 동안 정말 고마웠어요.<br />이제 별나라에서 행복하게 지낼 거예요!
+            함께 한 시간 동안 정말 고마웠어요.
+            <br />
+            이제 별나라에서 행복하게 지낼 거예요!
           </p>
 
           {/* 캐릭터 */}
@@ -237,7 +260,10 @@ export function CollectionScreen() {
         <DialogContent showCloseButton={false}>
           {/* 별 헤더 */}
           <div className="size-14 rounded-full bg-[#FFF383] flex items-center justify-center mx-auto mb-1">
-            <Star className="size-7 text-[#D97706] fill-[#D97706]" strokeWidth={1.5} />
+            <Star
+              className="size-7 text-[#D97706] fill-[#D97706]"
+              strokeWidth={1.5}
+            />
           </div>
 
           <DialogTitle className="text-center">추억 카드</DialogTitle>
@@ -256,26 +282,43 @@ export function CollectionScreen() {
                 <Star className="size-4 text-[#FFC107] fill-[#FFC107]" />
               </p>
               <p className="text-[12px] text-[#9B9B9B] text-center mt-0.5">
-                {new Date(selectedCharacter.startDate).toLocaleDateString("ko-KR")} ~{" "}
-                {new Date(selectedCharacter.endDate).toLocaleDateString("ko-KR")}
+                {new Date(selectedCharacter.startDate).toLocaleDateString(
+                  "ko-KR",
+                )}{" "}
+                ~{" "}
+                {new Date(selectedCharacter.endDate).toLocaleDateString(
+                  "ko-KR",
+                )}
               </p>
 
               {/* 스탯 3개 */}
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <div className="flex flex-col items-center gap-1 py-3.5 bg-[#CBF891] rounded-2xl">
                   <Calendar className="size-5 text-[#3E8C28]" />
-                  <p className="text-[17px] font-black text-[#1A2E1C] leading-none">{selectedCharacter.totalDays}</p>
-                  <p className="text-[10px] font-bold text-[#3E8C28]">함께한 날</p>
+                  <p className="text-[17px] font-black text-[#1A2E1C] leading-none">
+                    {selectedCharacter.totalDays}
+                  </p>
+                  <p className="text-[10px] font-bold text-[#3E8C28]">
+                    함께한 날
+                  </p>
                 </div>
                 <div className="flex flex-col items-center gap-1 py-3.5 bg-[#AEE1F9] rounded-2xl">
                   <Award className="size-5 text-[#2878B0]" />
-                  <p className="text-[17px] font-black text-[#0D2E50] leading-none">{selectedCharacter.finalStats.totalMissions}</p>
-                  <p className="text-[10px] font-bold text-[#2878B0]">완료 미션</p>
+                  <p className="text-[17px] font-black text-[#0D2E50] leading-none">
+                    {selectedCharacter.finalStats.totalMissions}
+                  </p>
+                  <p className="text-[10px] font-bold text-[#2878B0]">
+                    완료 미션
+                  </p>
                 </div>
-                <div className="flex flex-col items-center gap-1 py-3.5 bg-[#FFF383] rounded-2xl">
-                  <Coins className="size-5 text-[#8C7010]" />
-                  <p className="text-[17px] font-black text-[#3C2A00] leading-none">{selectedCharacter.finalStats.totalPoints}</p>
-                  <p className="text-[10px] font-bold text-[#8C7010]">획득 포인트</p>
+                <div className="flex flex-col items-center gap-1 py-3.5 bg-[#EEF2FF] rounded-2xl">
+                  <Zap className="size-5 text-[#6366F1]" />
+                  <p className="text-[17px] font-black text-[#3C2A00] leading-none">
+                    {selectedCharacter.finalStats.totalExp}
+                  </p>
+                  <p className="text-[10px] font-bold text-[#6366F1]">
+                    획득 경험치
+                  </p>
                 </div>
               </div>
 

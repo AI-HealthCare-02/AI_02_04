@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 import os
 
+from app.core.limiter import limiter
 from app.core.s3 import upload_diet_image
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -73,7 +74,9 @@ def update_diet_manual(
 
 
 @router.post("/analyze")
+@limiter.limit("5/minute")
 async def analyze_diet(
+    request:Request,
     image: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),

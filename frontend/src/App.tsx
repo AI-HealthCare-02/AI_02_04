@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import { setAuthToken } from "@/lib/api/client";
+import {
+  setAuthToken,
+  setRefreshToken,
+  setOnTokensRefreshed,
+} from "@/lib/api/client";
 import { SplashScreen } from "@/components/screens/splash-screen";
 import { LoginScreen } from "@/components/screens/login-screen";
 import { OnboardingScreen } from "@/components/screens/onboarding-screen";
@@ -23,7 +27,8 @@ import { EditHealthInfoScreen } from "@/components/screens/edit-health-info-scre
 import { Toaster } from "@/components/ui/toaster";
 
 export default function App() {
-  const { currentScreen, resetApp, accessToken } = useAppStore();
+  const { currentScreen, resetApp, accessToken, refreshToken, setTokens } =
+    useAppStore();
   const [isMounted, setIsMounted] = useState(false);
 
   // 브라우저 자동 스크롤 복원 비활성화 (최초 1회)
@@ -43,6 +48,11 @@ export default function App() {
   // 저장된 토큰을 API 클라이언트에 복원
   useEffect(() => {
     if (accessToken) setAuthToken(accessToken);
+    if (refreshToken) setRefreshToken(refreshToken);
+    // 토큰 갱신 완료 시 Zustand에 새 토큰 저장
+    setOnTokensRefreshed((newAccess, newRefresh) => {
+      setTokens(newAccess, newRefresh);
+    });
     setIsMounted(true);
   }, []);
 

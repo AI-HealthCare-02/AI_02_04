@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "@/src/home.css";
 import { useAppStore } from "@/lib/store";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BottomNav } from "@/components/ui/navigation-menu";
 import {
-  Coins,
   Droplets,
   Footprints,
   Apple,
@@ -17,6 +16,9 @@ import {
   Zap,
   Smile,
   ShieldCheck,
+  ThumbsUp,
+  ThumbsDown,
+  Frown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
@@ -40,6 +42,8 @@ interface LocalRec {
   title: string;
   reason: string;
   source: string;
+  confidence: number;       // 0~1
+  difficulty: "easy" | "medium" | "hard";
 }
 
 const AI_RECOMMENDATIONS: LocalRec[] = [
@@ -48,14 +52,132 @@ const AI_RECOMMENDATIONS: LocalRec[] = [
     title: "점심 시간 15분 걷기로 전환해보세요.",
     reason: "화/수 저녁 미션 실패가 반복되어 시간대를 변경했습니다.",
     source: "대한당뇨병학회 가이드 p.52",
+    confidence: 0.85,
+    difficulty: "easy",
   },
   {
     id: "rec-2",
     title: "저녁 국물 요리를 줄이고 샐러드로 대체해보세요.",
     reason: "최근 나트륨 섭취가 권장량을 초과합니다.",
     source: "고혈압학회 진료지침 p.42",
+    confidence: 0.72,
+    difficulty: "medium",
   },
 ];
+
+/* 신뢰도 색상 */
+const confidenceStyle = (score: number) => {
+  if (score >= 0.8) return { bar: "#3E8C28", bg: "#CBF891", text: "#2A5C34" };
+  if (score >= 0.6) return { bar: "#8C7010", bg: "#FFF383", text: "#5C4A00" };
+  return { bar: "#C0305A", bg: "#FFB8CA", text: "#8B1A3A" };
+};
+
+/* 난이도 뱃지 */
+const DIFFICULTY_STYLE = {
+  easy:   { label: "쉬움",   bg: "#E8F9D6", color: "#3E8C28" },
+  medium: { label: "보통",   bg: "#FFF9D6", color: "#8C7010" },
+  hard:   { label: "어려움", bg: "#FFE4ED", color: "#C0305A" },
+};
+
+/* 추천 카드 — 신뢰도 바 + 난이도 + 피드백 */
+type FeedbackType = "helpful" | "not_helpful" | "too_hard";
+
+function RecCard({ rec, index }: { rec: LocalRec; index: number }) {
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
+  const conf = confidenceStyle(rec.confidence);
+  const diff = DIFFICULTY_STYLE[rec.difficulty] ?? DIFFICULTY_STYLE.medium;
+  const isFirst = index === 0;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5">
+      {/* 헤더: 아이콘 + 난이도 뱃지 */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div
+            className={cn(
+              "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+              isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
+            )}
+          >
+            <Sparkles
+              className={cn("size-4", isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]")}
+            />
+          </div>
+          <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug">
+            {rec.title}
+          </p>
+        </div>
+        <span
+          className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5"
+          style={{ backgroundColor: diff.bg, color: diff.color }}
+        >
+          {diff.label}
+        </span>
+      </div>
+
+      {/* 이유 */}
+      <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
+        {rec.reason}
+      </p>
+
+      {/* 신뢰도 바 */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] text-[#9B9B9B] font-medium">AI 신뢰도</span>
+          <span
+            className="text-[11px] font-bold"
+            style={{ color: conf.text }}
+          >
+            {Math.round(rec.confidence * 100)}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${rec.confidence * 100}%`, backgroundColor: conf.bar }}
+          />
+        </div>
+      </div>
+
+      {/* 근거 출처 */}
+      <div className="flex items-start gap-1.5 py-2.5 border-t border-black/[0.05] mb-3">
+        <BookOpen className="size-3 text-[#9B9B9B] mt-0.5 shrink-0" />
+        <span className="text-[11px] text-[#9B9B9B] font-medium leading-relaxed">
+          {rec.source}
+        </span>
+      </div>
+
+      {/* 사용자 피드백 */}
+      {!feedback ? (
+        <div className="flex gap-2">
+          {(
+            [
+              { key: "helpful" as FeedbackType,     icon: ThumbsUp,   label: "도움됨", color: "#3E8C28", bg: "#E8F9D6" },
+              { key: "not_helpful" as FeedbackType, icon: ThumbsDown, label: "별로",   color: "#C0305A", bg: "#FFE4ED" },
+              { key: "too_hard" as FeedbackType,    icon: Frown,      label: "어려움", color: "#8C7010", bg: "#FFF9D6" },
+            ] as const
+          ).map(({ key, icon: Icon, label, color, bg }) => (
+            <button
+              key={key}
+              onClick={() => setFeedback(key)}
+              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[12px] font-bold transition-colors border"
+              style={{ color, backgroundColor: "white", borderColor: `${color}30` }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = bg)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "white")}
+            >
+              <Icon className="size-3" />
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-2 bg-[#F0FDF4] rounded-xl text-[12px] font-bold text-[#3E8C28]">
+          ✅ 피드백 반영됨 — 다음 추천에 활용됩니다
+        </div>
+      )}
+    </div>
+  );
+}
 
 const MOOD_EMOJI: Record<string, string> = {
   happy: "😊",
@@ -288,6 +410,7 @@ export function HomeScreen() {
   >(undefined);
   const [displayRecs, setDisplayRecs] =
     useState<LocalRec[]>(AI_RECOMMENDATIONS);
+  const [fallbackMessage, setFallbackMessage] = useState<string | undefined>(undefined);
   const [riskChangeSummary, setRiskChangeSummary] =
     useState<RiskChangeSummary | null>(null);
   const [overallState, setOverallState] = useState<OverallState | null>(null);
@@ -295,19 +418,38 @@ export function HomeScreen() {
   /* ── 테스트 패널 ── */
   const [showTestPanel, setShowTestPanel] = useState(false);
 
+  /* ── 추천 슬라이더 ── */
+  const [currentRecIndex, setCurrentRecIndex] = useState(0);
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const handleSliderScroll = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollLeft / el.offsetWidth);
+    setCurrentRecIndex(index);
+  };
+
+  const scrollToSlide = (index: number) => {
+    const el = sliderRef.current;
+    if (!el) return;
+    el.scrollTo({ left: index * el.offsetWidth, behavior: "smooth" });
+  };
+
   /* ── ML API 호출 (백엔드 준비 후 아래 주석 해제) ── */
   useEffect(() => {
-    const userId = userProfile?.id ?? "guest";
-    fetchRecommendations({ user_id: userId })
+    fetchRecommendations()
       .then((data) => {
         setCorrectionStatus(data.correction_status);
         setEscalationMessage(data.escalation_message);
+        setFallbackMessage(data.fallback_message);
         if (data.correction_status !== "ESCALATED") {
           const mapped: LocalRec[] = data.recommendations.map((r, i) => ({
             id: `api-${i}`,
             title: r.action,
             reason: r.reason,
             source: r.evidence_source,
+            confidence: r.confidence ?? 0.75,
+            difficulty: r.difficulty ?? "medium",
           }));
           setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
         }
@@ -488,12 +630,12 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {/* 포인트 배지 */}
+          {/* 경험치 배지 */}
           {/* <div className="flex items-center gap-1.5 bg-white/50 backdrop-blur-sm rounded-full px-3.5 py-2 border border-white/70 shadow-[0_1px_8px_rgba(0,0,0,0.08)]">
-            <Coins className="size-3.5 text-[#D97706]" />
+            <Zap className="size-3.5 text-[#6366F1]" />
             <span className="text-[13px] font-bold text-[#1A2E1C]">
-              {(userProfile?.points ?? 0).toLocaleString()}
-              <span className="text-[11px] font-semibold text-[#3A6B44] ms-0.5">P</span>
+              {(character?.experience ?? 0).toLocaleString()}
+              <span className="text-[11px] font-semibold text-[#3A6B44] ms-0.5">XP</span>
             </span>
           </div> */}
         </div>
@@ -686,52 +828,71 @@ export function HomeScreen() {
                 <h2 className="text-[17px] font-bold text-[#1A2E1C]">
                   오늘의 추천
                 </h2>
-                <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
-                  AI 분석
-                </span>
+                <div className="flex items-center gap-2">
+                  {displayRecs.length > 1 && (
+                    <span className="text-[11px] font-semibold text-[#9B9B9B]">
+                      {currentRecIndex + 1} / {displayRecs.length}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-bold text-[#2A5C34] uppercase tracking-[0.06em] badge-tint px-2.5 py-1 rounded-full border border-white/70">
+                    AI 분석
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {displayRecs.map((rec, idx) => {
-                  const isFirst = idx === 0;
-                  return (
-                    <div
-                      key={rec.id}
-                      className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={cn(
-                            "size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-                            isFirst ? "bg-[#FFDBFD]" : "bg-[#CBF891]",
-                          )}
-                        >
-                          <Sparkles
-                            className={cn(
-                              "size-4",
-                              isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
-                            )}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug mb-1.5">
-                            {rec.title}
-                          </p>
-                          <p className="text-[13px] text-[#7A7A7A] leading-normal mb-3">
-                            {rec.reason}
-                          </p>
-                          <div className="flex items-center gap-1.5 pt-2.5 border-t border-black/[0.05]">
-                            <BookOpen className="size-3 text-[#9B9B9B]" />
-                            <span className="text-[11px] text-[#9B9B9B] font-medium">
-                              {rec.source}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* fallback 메시지 (데이터 부족 등) */}
+              {fallbackMessage && (
+                <div className="rounded-2xl bg-[#FFFDF0] border border-[#FFF383] p-4 flex items-start gap-3 mb-3">
+                  <div className="size-7 rounded-lg bg-[#FFF383] flex items-center justify-center shrink-0 mt-0.5">
+                    <Sparkles className="size-3.5 text-[#8C7010]" />
+                  </div>
+                  <p className="text-[13px] text-[#8C7010] leading-relaxed font-medium">
+                    {fallbackMessage}
+                  </p>
+                </div>
+              )}
+
+              {/* ── 카드 슬라이더 ── */}
+              <div
+                ref={sliderRef}
+                onScroll={handleSliderScroll}
+                className="rec-slider flex overflow-x-auto"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch",
+                  gap: "12px",
+                }}
+              >
+                {displayRecs.map((rec, idx) => (
+                  <div
+                    key={rec.id}
+                    style={{ scrollSnapAlign: "start", minWidth: "100%", width: "100%" }}
+                  >
+                    <RecCard rec={rec} index={idx} />
+                  </div>
+                ))}
               </div>
+
+              {/* ── 도트 인디케이터 ── */}
+              {displayRecs.length > 1 && (
+                <div className="flex items-center justify-center gap-1.5 mt-3">
+                  {displayRecs.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => scrollToSlide(idx)}
+                      aria-label={`${idx + 1}번 추천으로 이동`}
+                      className="rounded-full transition-all duration-300"
+                      style={{
+                        width: currentRecIndex === idx ? 20 : 6,
+                        height: 6,
+                        backgroundColor: currentRecIndex === idx ? "#3E8C28" : "#D0D0D0",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           )}
         </section>
