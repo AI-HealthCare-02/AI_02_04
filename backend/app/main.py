@@ -3,18 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import sentry_sdk
 
 from app.core.limiter import limiter
 from app.core.config import settings
 from app.routers import auth, user, health, challenge,character,dashboard, diet, predict, recommend,report
 
 
-sentry_sdk.init(
-    dsn = settings.SENTRY_DSN,
-    send_default_pii = True,
-    traces_sample_rate = 0.1
-)
 
 app = FastAPI(
     title="당마고치 API",

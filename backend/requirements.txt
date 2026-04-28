@@ -35,5 +35,4 @@ lightgbm==4.3.0
 
 
 slowapi
-
-sentry-sdk[fastapi]
+redis[asyncio]

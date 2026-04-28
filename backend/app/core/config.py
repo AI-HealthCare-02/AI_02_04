@@ -30,7 +30,12 @@ class Settings(BaseSettings):
     KAKAO_REDIRECT_URI: str = ""
     KAKAO_CLIENT_SECRET: str = ""
 
-    SENTRY_DSN : str = ""
+
+    
+    REDIS_URL: str =""
+
+    INTERNAL_API_KEY:str =""
+    SENTRY_DSN:str =""
 
     class Config:
         env_file = ".env"
