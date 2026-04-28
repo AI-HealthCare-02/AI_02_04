@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     KAKAO_REDIRECT_URI: str = ""
     KAKAO_CLIENT_SECRET: str = ""
 
+    SENTRY_DSN : str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
