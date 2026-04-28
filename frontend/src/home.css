@@ -40,7 +40,22 @@
   opacity: 0.6;
 }
 .bg-image.default:before {
-  background: url(../public/bg-green.png) no-repeat center/ cover;
+  background: url(/bg-green.png) no-repeat center / cover;
+}
+.bg-image.happy:before {
+  background: url(/bg-happy.png) no-repeat center / cover;
+}
+.bg-image.energetic:before {
+  background: url(/bg-energetic.jpeg) no-repeat center / cover;
+}
+.bg-image.recovering:before {
+  background: url(/bg-recovering.png) no-repeat center / cover;
+}
+.bg-image.tired:before {
+  background: url(/bg-tired.png) no-repeat center / cover;
+}
+.bg-image.struggling:before {
+  background: url(/bg-struggling.jpeg) no-repeat center / cover;
 }
 
 /* 옵션: 초록 테마 (밝은 배경에 사용) */

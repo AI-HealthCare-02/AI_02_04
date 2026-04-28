@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
 import { fetchWeeklyReport } from "@/lib/api";
 import type {
   WeeklyReportResponse,
@@ -215,6 +216,7 @@ function getWeekLabel() {
 
 export function ReportScreen() {
   const { setScreen, missions, dietEntries } = useAppStore();
+  const { toast } = useToast();
   const isScrolled = useScrollHeader();
   const [reportData, setReportData] = useState<WeeklyReportResponse | null>(
     null,
@@ -224,7 +226,11 @@ export function ReportScreen() {
     fetchWeeklyReport()
       .then(setReportData)
       .catch(() => {
-        /* API 실패 시 하드코딩 폴백 */
+        toast({
+          title: "리포트 데이터를 불러오지 못했어요",
+          description: "이전 데이터로 표시됩니다.",
+          variant: "destructive",
+        });
       });
   }, []);
 

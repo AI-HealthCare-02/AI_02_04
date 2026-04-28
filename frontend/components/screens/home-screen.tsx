@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
+import { Character } from "@/components/character";
 import { Button } from "@/components/ui/button";
 import {
   fetchRecommendations,
@@ -557,6 +558,8 @@ export function HomeScreen() {
     ? CHARACTER_THEME[overallState].bgColor
     : "#F9FFEF";
 
+  const bgStateClass = overallState ?? "default";
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -568,7 +571,7 @@ export function HomeScreen() {
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
-      <div className="bg-image default relative flex flex-col items-center px-5 pt-14 pb-7">
+      <div className={`bg-image ${bgStateClass} relative flex flex-col items-center px-5 pt-14 pb-7`}>
         {/* ── 떠다니는 도형들 ── */}
         {/* 좌상단 영역 */}
         <span
@@ -687,18 +690,15 @@ export function HomeScreen() {
           </div> */}
         </div>
 
-        {/* 캐릭터 GIF — 크게 중앙 */}
-        <div
-          className="flex items-center justify-center"
-          style={{ width: 100, height: 210 }}
-        >
-          <img
-            src="/created-gif.gif"
-            alt={character?.name ?? "캐릭터"}
-            className="w-full h-full object-contain drop-shadow-xl"
-            style={{ imageRendering: "pixelated" }}
-          />
-        </div>
+        {/* 캐릭터 이미지 — 레벨별 분기 */}
+        <Character
+          level={character?.level ?? 1}
+          mood={character?.mood ?? "normal"}
+          size="xl"
+          showPlatform={false}
+          animated
+          className="drop-shadow-xl"
+        />
 
         {/* 캐릭터 이름 + 레벨 + 기분 */}
         <div className="flex items-center gap-2.5 mt-3 mb-4 z-2">
