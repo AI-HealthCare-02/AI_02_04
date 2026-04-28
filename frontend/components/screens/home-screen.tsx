@@ -571,7 +571,9 @@ export function HomeScreen() {
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
-      <div className={`bg-image ${bgStateClass} relative flex flex-col items-center px-5 pt-14 pb-7`}>
+      <div
+        className={`bg-image ${bgStateClass} relative flex flex-col items-center px-5 pt-14 pb-7`}
+      >
         {/* ── 떠다니는 도형들 ── */}
         {/* 좌상단 영역 */}
         <span
@@ -690,15 +692,31 @@ export function HomeScreen() {
           </div> */}
         </div>
 
-        {/* 캐릭터 이미지 — 레벨별 분기 */}
-        <Character
-          level={character?.level ?? 1}
-          mood={character?.mood ?? "normal"}
-          size="xl"
-          showPlatform={false}
-          animated
-          className="drop-shadow-xl"
-        />
+        {/* 캐릭터 이미지 — 레벨별 분기 + 말풍선 */}
+        <div className="relative flex flex-col items-center">
+          {/* 말풍선 — riskChangeSummary 있을 때만 표시 */}
+          {riskChangeSummary && (
+            <div className="relative mb-1">
+              <img
+                src="/img-bubble.png"
+                alt="말풍선"
+                className="w-56 h-auto pointer-events-none"
+                style={{ imageRendering: "pixelated" }}
+              />
+              <p className="absolute mb-2 inset-0 flex items-center justify-center text-center px-5 text-[12px] font-bold text-[#3C3C3C] leading-snug">
+                {getCharacterMessage(riskChangeSummary)}
+              </p>
+            </div>
+          )}
+          <Character
+            level={character?.level ?? 1}
+            mood={character?.mood ?? "normal"}
+            size="xl"
+            showPlatform={false}
+            animated
+            className="drop-shadow-xl"
+          />
+        </div>
 
         {/* 캐릭터 이름 + 레벨 + 기분 */}
         <div className="flex items-center gap-2.5 mt-3 mb-4 z-2">

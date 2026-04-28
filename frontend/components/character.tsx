@@ -43,16 +43,6 @@ export function Character({
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>
-      {/* happy 말풍선 — 캐릭터 위 우측 */}
-      {mood === "happy" && (
-        <img
-          src={HAPPY_BUBBLE}
-          alt="happy bubble"
-          className="w-20 h-20 object-contain animate-bounce-gentle pointer-events-none"
-          style={{ imageRendering: "pixelated" }}
-        />
-      )}
-
       {/* 레벨 5 스파클 */}
       {level === 5 && (
         <>
