@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
 from sqlalchemy.orm import Session
 import httpx
+from datetime import datetime
 
 from app.core.limiter import limiter
 from app.core.database import get_db
@@ -20,7 +22,7 @@ from app.models.user import User
 
 
 router = APIRouter()
-
+security = HTTPBearer()
 
 @router.post("/register", status_code=201)
 @limiter.limit("3/minute")
@@ -193,3 +195,26 @@ def kakao_register(data: KakaoRegisterRequest, db: Session = Depends(get_db)):
             "refresh_token": refresh_token,
         },
     }
+
+
+
+@router.delete('/me')
+async def delete_user(
+    credentials : HTTPAuthorizationCredentials  = Depends(security),
+    current_user :dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == current_user["user_id"]).first()
+    user.is_active = False
+    db.commit()
+
+    token = credentials.credentials
+    payload = current_user["payload"]
+
+    # exp = payload = payload.get("exp")
+    # now = int(datetime.utcnow().timestamp())
+    # ttl = exp - now
+    # if ttl >0:
+    #     await add_to_blacklist(token, ttl)
+
+    return {"success" :True, "message" : "회원탈퇴 완료 "}
