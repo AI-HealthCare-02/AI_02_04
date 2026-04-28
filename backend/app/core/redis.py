@@ -9,7 +9,9 @@ def get_redis_client():
         redis_client = redis.from_url(settings.REDIS_URL)
     return redis_client
 
-async def add_blacklist(token: str, expire_seconds: int):
+
+
+async def add_blacklist(token: str, expire_seconds: int):  
     try:
         client = get_redis_client()
         await client.setex(
