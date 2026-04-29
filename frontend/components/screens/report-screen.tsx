@@ -281,9 +281,9 @@ export function ReportScreen() {
     // 최근 7개 식단 항목을 워드클라우드로 변환
     const recent = dietEntries.slice(-7);
     return recent.map((entry, i) => ({
-      text: entry.name,
+      text: entry.food_name ?? "식단",
       size: SIZES[Math.min(i, SIZES.length - 1)],
-      healthy: HEALTHY_KEYWORDS.some((k) => entry.name.includes(k)),
+      healthy: HEALTHY_KEYWORDS.some((k) => (entry.food_name ?? "").includes(k)),
     }));
   }, [dietEntries]);
 

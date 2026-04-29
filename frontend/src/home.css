@@ -40,7 +40,7 @@
   opacity: 0.6;
 }
 .bg-image.default:before {
-  background: url(/bg-green.png) no-repeat center / cover;
+  background: url(/bg-happy.png) no-repeat center / cover;
 }
 .bg-image.happy:before {
   background: url(/bg-happy.png) no-repeat center / cover;
