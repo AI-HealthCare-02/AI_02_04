@@ -53,14 +53,22 @@ const EXECUTION_TIME_LABELS = {
 // 카테고리 → 아이콘 매핑
 function iconForCategory(category: string): React.ElementType {
   switch (category) {
-    case "walking":      return Footprints;
-    case "water":        return Droplets;
-    case "exercise":     return Dumbbell;
-    case "diet":         return Apple;
-    case "sleep":        return Moon;
-    case "medicine":     return Pill;
-    case "health_record": return Heart;
-    default:             return Camera;
+    case "walking":
+      return Footprints;
+    case "water":
+      return Droplets;
+    case "exercise":
+      return Dumbbell;
+    case "diet":
+      return Apple;
+    case "sleep":
+      return Moon;
+    case "medicine":
+      return Pill;
+    case "health_record":
+      return Heart;
+    default:
+      return Camera;
   }
 }
 
@@ -114,36 +122,42 @@ export function DailyLogScreen() {
 
   /* ── Zustand 미션 → ChallengeLog 변환 ── */
   const [logOverrides, setLogOverrides] = useState<
-    Record<string, Pick<ChallengeLog, "fail_reason" | "execution_time" | "exp_earned">>
+    Record<
+      string,
+      Pick<ChallengeLog, "fail_reason" | "execution_time" | "exp_earned">
+    >
   >({});
 
-  const logs: ChallengeLog[] = useMemo(() =>
-    missions.map((m) => {
-      const override = logOverrides[m.id];
-      return {
-        log_id: m.id,
-        title: m.title,
-        icon: iconForCategory(m.category),
-        value: missionValueLabel(m),
-        is_completed: m.completed,
-        fail_reason: override?.fail_reason ?? null,
-        execution_time: override?.execution_time ?? null,
-        exp_earned: m.completed
-          ? m.exp
-          : (override?.exp_earned ?? 0),
-        streak_count: 0,
-      };
-    }),
-  [missions, logOverrides]);
+  const logs: ChallengeLog[] = useMemo(
+    () =>
+      missions.map((m) => {
+        const override = logOverrides[m.id];
+        return {
+          log_id: m.id,
+          title: m.title,
+          icon: iconForCategory(m.category),
+          value: missionValueLabel(m),
+          is_completed: m.completed,
+          fail_reason: override?.fail_reason ?? null,
+          execution_time: override?.execution_time ?? null,
+          exp_earned: m.completed ? m.exp : (override?.exp_earned ?? 0),
+          streak_count: 0,
+        };
+      }),
+    [missions, logOverrides],
+  );
 
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
-  const [tempReason, setTempReason] = useState<ChallengeLog["fail_reason"]>(null);
-  const [tempTime, setTempTime] = useState<ChallengeLog["execution_time"]>(null);
+  const [tempReason, setTempReason] =
+    useState<ChallengeLog["fail_reason"]>(null);
+  const [tempTime, setTempTime] =
+    useState<ChallengeLog["execution_time"]>(null);
 
   /* ── 요약 계산 ── */
   const completedCount = logs.filter((l) => l.is_completed).length;
   const totalCount = logs.length;
-  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const progressPercent =
+    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const todayExps = logs.reduce((sum, l) => sum + l.exp_earned, 0);
 
   /* ── 미달성 사유 저장 ── */
@@ -197,7 +211,9 @@ export function DailyLogScreen() {
             <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">
               일일 건강 기록
             </h1>
-            <p className="text-[13px] text-[#7A7A7A] font-medium">{dateLabel}</p>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">
+              {dateLabel}
+            </p>
           </div>
         </div>
       </div>
@@ -220,7 +236,11 @@ export function DailyLogScreen() {
                   <span
                     className={cn(
                       "text-[11px] font-bold",
-                      isToday ? "text-white" : isPast ? "text-[#3E8C28]" : "text-[#9B9B9B]",
+                      isToday
+                        ? "text-white"
+                        : isPast
+                          ? "text-[#3E8C28]"
+                          : "text-[#9B9B9B]",
                     )}
                   >
                     {day}
@@ -228,7 +248,11 @@ export function DailyLogScreen() {
                   <span
                     className={cn(
                       "text-[14px] font-bold leading-none",
-                      isToday ? "text-white" : isPast ? "text-[#3E8C28]" : "text-[#3C3C3C]",
+                      isToday
+                        ? "text-white"
+                        : isPast
+                          ? "text-[#3E8C28]"
+                          : "text-[#3C3C3C]",
                     )}
                   >
                     {weekDates[idx]}
@@ -236,7 +260,11 @@ export function DailyLogScreen() {
                   <div
                     className={cn(
                       "size-1.5 rounded-full",
-                      isToday ? "bg-white/60" : isPast ? "bg-[#87D57B]" : "bg-transparent",
+                      isToday
+                        ? "bg-white/60"
+                        : isPast
+                          ? "bg-[#87D57B]"
+                          : "bg-transparent",
                     )}
                   />
                 </div>
@@ -258,7 +286,9 @@ export function DailyLogScreen() {
             </div>
             <p className="text-[36px] font-bold text-[#2A2A2A] leading-none tracking-[-0.02em]">
               {Math.round(progressPercent)}
-              <span className="text-[18px] font-bold text-[#9B9B9B] ms-0.5">%</span>
+              <span className="text-[18px] font-bold text-[#9B9B9B] ms-0.5">
+                %
+              </span>
             </p>
           </div>
 
@@ -274,13 +304,16 @@ export function DailyLogScreen() {
 
           <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#F5F5F5]">
             <div className="flex items-center gap-3 bg-[#FFFBE7] rounded-xl px-3.5 py-3">
-              <div className="size-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center">
-                <Zap className="size-4 text-[#6366F1]" />
+              <div className="size-8 rounded-lg bg-[#FFEBD6] flex items-center justify-center">
+                <Zap className="size-4 text-[#EDA35A]" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-[#7A7A7A]">획득 경험치</p>
-                <p className="text-[16px] font-black text-[#6366F1] leading-none">
-                  +{todayExps}<span className="text-[10px] ms-0.5">XP</span>
+                <p className="text-[11px] font-medium text-[#7A7A7A]">
+                  획득 경험치
+                </p>
+                <p className="text-[16px] font-black text-[#EDA35A] leading-none">
+                  +{todayExps}
+                  <span className="text-[10px] ms-0.5">XP</span>
                 </p>
               </div>
             </div>
@@ -289,9 +322,12 @@ export function DailyLogScreen() {
                 <Flame className="size-4 text-[#C0502A]" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-[#7A7A7A]">완료 미션</p>
+                <p className="text-[11px] font-medium text-[#7A7A7A]">
+                  완료 미션
+                </p>
                 <p className="text-[16px] font-black text-[#C0502A] leading-none">
-                  {completedCount}<span className="text-[10px] ms-0.5">개</span>
+                  {completedCount}
+                  <span className="text-[10px] ms-0.5">개</span>
                 </p>
               </div>
             </div>
@@ -331,7 +367,9 @@ export function DailyLogScreen() {
                     <div className="flex items-start gap-3.5">
                       <div
                         className="size-11 rounded-2xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: isCompleted ? "#E8F9D6" : "#F5F5F5" }}
+                        style={{
+                          backgroundColor: isCompleted ? "#E8F9D6" : "#F5F5F5",
+                        }}
                       >
                         <Icon
                           className="size-5"
@@ -341,7 +379,12 @@ export function DailyLogScreen() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className={cn("text-[15px] font-bold", isCompleted ? "text-[#2A2A2A]" : "text-[#3C3C3C]")}>
+                          <p
+                            className={cn(
+                              "text-[15px] font-bold",
+                              isCompleted ? "text-[#2A2A2A]" : "text-[#3C3C3C]",
+                            )}
+                          >
                             {log.title}
                           </p>
                           {isCompleted ? (
@@ -352,7 +395,12 @@ export function DailyLogScreen() {
                         </div>
 
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={cn("text-[13px] font-semibold", isCompleted ? "text-[#3E8C28]" : "text-[#7A7A7A]")}>
+                          <span
+                            className={cn(
+                              "text-[13px] font-semibold",
+                              isCompleted ? "text-[#3E8C28]" : "text-[#7A7A7A]",
+                            )}
+                          >
                             {log.value}
                           </span>
                           {log.execution_time && (
@@ -423,10 +471,15 @@ export function DailyLogScreen() {
       >
         <DialogContent showCloseButton={false}>
           <div className="size-14 rounded-full bg-[#FFB8CA] flex items-center justify-center mx-auto mb-1">
-            <MessageSquareHeart className="size-7 text-[#C0305A]" strokeWidth={2} />
+            <MessageSquareHeart
+              className="size-7 text-[#C0305A]"
+              strokeWidth={2}
+            />
           </div>
 
-          <DialogTitle className="text-center">앗, 오늘은 아쉽네요! 🥲</DialogTitle>
+          <DialogTitle className="text-center">
+            앗, 오늘은 아쉽네요! 🥲
+          </DialogTitle>
           <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
             내일 더 꼭 맞는 AI 건강 조언을 해드리기 위해
             <br />못 하신 이유를 살짝 알려주세요.
@@ -438,7 +491,11 @@ export function DailyLogScreen() {
                 어떤 이유 때문이었나요?
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(FAIL_REASON_LABELS) as Array<keyof typeof FAIL_REASON_LABELS>).map((reason) => (
+                {(
+                  Object.keys(FAIL_REASON_LABELS) as Array<
+                    keyof typeof FAIL_REASON_LABELS
+                  >
+                ).map((reason) => (
                   <button
                     key={reason}
                     onClick={() => setTempReason(reason)}
@@ -461,7 +518,11 @@ export function DailyLogScreen() {
                 <span className="normal-case font-normal">(선택)</span>
               </p>
               <div className="flex gap-2">
-                {(Object.keys(EXECUTION_TIME_LABELS) as Array<keyof typeof EXECUTION_TIME_LABELS>).map((time) => (
+                {(
+                  Object.keys(EXECUTION_TIME_LABELS) as Array<
+                    keyof typeof EXECUTION_TIME_LABELS
+                  >
+                ).map((time) => (
                   <button
                     key={time}
                     onClick={() => setTempTime(time)}

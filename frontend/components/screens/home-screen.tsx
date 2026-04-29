@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OfflinePenaltyModal } from "./offline-penalty-modal";
+import { Character } from "@/components/character";
 import { Button } from "@/components/ui/button";
 import {
   fetchRecommendations,
@@ -42,7 +43,7 @@ interface LocalRec {
   title: string;
   reason: string;
   source: string;
-  confidence: number;       // 0~1
+  confidence: number; // 0~1
   difficulty: "easy" | "medium" | "hard";
 }
 
@@ -74,9 +75,9 @@ const confidenceStyle = (score: number) => {
 
 /* 난이도 뱃지 */
 const DIFFICULTY_STYLE = {
-  easy:   { label: "쉬움",   bg: "#E8F9D6", color: "#3E8C28" },
-  medium: { label: "보통",   bg: "#FFF9D6", color: "#8C7010" },
-  hard:   { label: "어려움", bg: "#FFE4ED", color: "#C0305A" },
+  easy: { label: "쉬움", bg: "#E8F9D6", color: "#3E8C28" },
+  medium: { label: "보통", bg: "#FFF9D6", color: "#8C7010" },
+  hard: { label: "어려움", bg: "#FFE4ED", color: "#C0305A" },
 };
 
 /* 추천 카드 — 신뢰도 바 + 난이도 + 피드백 */
@@ -89,7 +90,7 @@ function RecCard({ rec, index }: { rec: LocalRec; index: number }) {
   const isFirst = index === 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-5">
+    <div className="bg-white rounded-2xl p-5">
       {/* 헤더: 아이콘 + 난이도 뱃지 */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -100,7 +101,10 @@ function RecCard({ rec, index }: { rec: LocalRec; index: number }) {
             )}
           >
             <Sparkles
-              className={cn("size-4", isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]")}
+              className={cn(
+                "size-4",
+                isFirst ? "text-[#C85A54]" : "text-[#6B9B7A]",
+              )}
             />
           </div>
           <p className="text-[14px] font-bold text-[#3C3C3C] leading-snug">
@@ -123,18 +127,20 @@ function RecCard({ rec, index }: { rec: LocalRec; index: number }) {
       {/* 신뢰도 바 */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] text-[#9B9B9B] font-medium">AI 신뢰도</span>
-          <span
-            className="text-[11px] font-bold"
-            style={{ color: conf.text }}
-          >
+          <span className="text-[11px] text-[#9B9B9B] font-medium">
+            AI 신뢰도
+          </span>
+          <span className="text-[11px] font-bold" style={{ color: conf.text }}>
             {Math.round(rec.confidence * 100)}%
           </span>
         </div>
         <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${rec.confidence * 100}%`, backgroundColor: conf.bar }}
+            style={{
+              width: `${rec.confidence * 100}%`,
+              backgroundColor: conf.bar,
+            }}
           />
         </div>
       </div>
@@ -152,18 +158,42 @@ function RecCard({ rec, index }: { rec: LocalRec; index: number }) {
         <div className="flex gap-2">
           {(
             [
-              { key: "helpful" as FeedbackType,     icon: ThumbsUp,   label: "도움됨", color: "#3E8C28", bg: "#E8F9D6" },
-              { key: "not_helpful" as FeedbackType, icon: ThumbsDown, label: "별로",   color: "#C0305A", bg: "#FFE4ED" },
-              { key: "too_hard" as FeedbackType,    icon: Frown,      label: "어려움", color: "#8C7010", bg: "#FFF9D6" },
+              {
+                key: "helpful" as FeedbackType,
+                icon: ThumbsUp,
+                label: "도움됨",
+                color: "#3E8C28",
+                bg: "#E8F9D6",
+              },
+              {
+                key: "not_helpful" as FeedbackType,
+                icon: ThumbsDown,
+                label: "별로",
+                color: "#C0305A",
+                bg: "#FFE4ED",
+              },
+              {
+                key: "too_hard" as FeedbackType,
+                icon: Frown,
+                label: "어려움",
+                color: "#8C7010",
+                bg: "#FFF9D6",
+              },
             ] as const
           ).map(({ key, icon: Icon, label, color, bg }) => (
             <button
               key={key}
               onClick={() => setFeedback(key)}
               className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[12px] font-bold transition-colors border"
-              style={{ color, backgroundColor: "white", borderColor: `${color}30` }}
+              style={{
+                color,
+                backgroundColor: "white",
+                borderColor: `${color}30`,
+              }}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = bg)}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "white")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "white")
+              }
             >
               <Icon className="size-3" />
               {label}
@@ -410,7 +440,9 @@ export function HomeScreen() {
   >(undefined);
   const [displayRecs, setDisplayRecs] =
     useState<LocalRec[]>(AI_RECOMMENDATIONS);
-  const [fallbackMessage, setFallbackMessage] = useState<string | undefined>(undefined);
+  const [fallbackMessage, setFallbackMessage] = useState<string | undefined>(
+    undefined,
+  );
   const [riskChangeSummary, setRiskChangeSummary] =
     useState<RiskChangeSummary | null>(null);
   const [overallState, setOverallState] = useState<OverallState | null>(null);
@@ -526,6 +558,8 @@ export function HomeScreen() {
     ? CHARACTER_THEME[overallState].bgColor
     : "#F9FFEF";
 
+  const bgStateClass = overallState ?? "default";
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -537,7 +571,9 @@ export function HomeScreen() {
       {/* ════════════════════════════════════════
           HERO — 캐릭터 영역
       ════════════════════════════════════════ */}
-      <div className="retro-scene relative flex flex-col items-center px-5 pt-14 pb-7">
+      <div
+        className={`bg-image ${bgStateClass} relative flex flex-col items-center px-5 pt-14 pb-7`}
+      >
         {/* ── 떠다니는 도형들 ── */}
         {/* 좌상단 영역 */}
         <span
@@ -545,7 +581,7 @@ export function HomeScreen() {
           style={{ top: "10%", left: "8%", animationDelay: "0s" }}
         />
         <span
-          className="retro-shape rs-triangle rc-blue   rz-xs ra-2"
+          className="retro-shape rs-square img_mushroom_bl  rz-xs ra-2"
           style={{ top: "18%", left: "22%", animationDelay: "0.8s" }}
         />
         <span
@@ -563,17 +599,21 @@ export function HomeScreen() {
           style={{ top: "12%", right: "10%", animationDelay: "0.6s" }}
         />
         <span
-          className="retro-shape rs-square   rc-green  rz-md ra-5"
+          className="retro-shape rs-square  img_star_brw rz-md ra-5"
           style={{ top: "22%", right: "6%", animationDelay: "1.5s" }}
         />
         <span
           className="retro-shape rs-ring     rc-white  rz-sm ra-3"
           style={{ top: "8%", right: "28%", animationDelay: "0.3s" }}
         />
+        <span
+          className="retro-shape img_star_pr ra-1"
+          style={{ top: "8%", right: "28%", animationDelay: "0.3s" }}
+        ></span>
 
         {/* 좌중앙 영역 */}
         <span
-          className="retro-shape rs-circle   rc-red    rz-md ra-3"
+          className="retro-shape rs-circle img-flower-iv rz-md ra-3"
           style={{ top: "42%", left: "4%", animationDelay: "2.1s" }}
         />
         <span
@@ -587,11 +627,11 @@ export function HomeScreen() {
 
         {/* 우중앙 영역 */}
         <span
-          className="retro-shape rs-circle   rc-red    rz-lg ra-5"
+          className="retro-shape rs-circle  img_mushroom_gn  rz-lg ra-5"
           style={{ top: "48%", right: "3%", animationDelay: "1.8s" }}
         />
         <span
-          className="retro-shape rs-ring     rc-yellow rz-sm ra-2"
+          className="retro-shape rs-ring rc-yellow rz-sm ra-2"
           style={{ top: "38%", right: "18%", animationDelay: "0.7s" }}
         />
         <span
@@ -601,23 +641,35 @@ export function HomeScreen() {
 
         {/* 하단 영역 */}
         <span
-          className="retro-shape rs-square   rc-green  rz-lg ra-2"
-          style={{ bottom: "24%", left: "3%", animationDelay: "1.3s" }}
+          className="retro-shape rs-square  img_puding_yw rz-lg ra-2"
+          style={{ bottom: "35%", left: "3%", animationDelay: "1.3s" }}
         />
         <span
-          className="retro-shape rs-circle   rc-red    rz-xl ra-5"
-          style={{ bottom: "18%", left: "18%", animationDelay: "0.9s" }}
+          className="retro-shape rs-circle img_star_pr rz-xl ra-5"
+          style={{
+            width: "100px",
+            height: "100px",
+            bottom: "18%",
+            left: "18%",
+            animationDelay: "0.9s",
+          }}
         />
         <span
-          className="retro-shape rs-circle   rc-red    rz-lg ra-3"
-          style={{ bottom: "16%", right: "8%", animationDelay: "2.0s" }}
+          className="retro-shape rs-circle img-flower-iv rz-lg ra-3"
+          style={{
+            width: "100px",
+            height: "100px",
+            bottom: "16%",
+            right: "8%",
+            animationDelay: "2.0s",
+          }}
         />
         <span
-          className="retro-shape rs-dot      rc-yellow rz-xs ra-6"
+          className="retro-shape rs-dot rc-yellow rz-xs ra-6"
           style={{ bottom: "30%", right: "22%", animationDelay: "0.5s" }}
         />
         {/* 최상단: 스트릭 + 포인트 */}
-        <div className="w-full flex items-center justify-between mb-5">
+        <div className="w-full flex items-center justify-between mb-5 z-2">
           <div>
             <p className="text-[10px] font-bold text-[#2A5C34]/60 uppercase tracking-[0.10em] mb-0.5">
               Streak days
@@ -640,21 +692,34 @@ export function HomeScreen() {
           </div> */}
         </div>
 
-        {/* 캐릭터 GIF — 크게 중앙 */}
-        <div
-          className="flex items-center justify-center"
-          style={{ width: 210, height: 210 }}
-        >
-          <img
-            src="/created-gif.gif"
-            alt={character?.name ?? "캐릭터"}
-            className="w-full h-full object-contain drop-shadow-xl"
-            style={{ imageRendering: "pixelated" }}
+        {/* 캐릭터 이미지 — 레벨별 분기 + 말풍선 */}
+        <div className="relative flex flex-col items-center">
+          {/* 말풍선 — riskChangeSummary 있을 때만 표시 */}
+          {riskChangeSummary && (
+            <div className="relative mb-1">
+              <img
+                src="/img-bubble.png"
+                alt="말풍선"
+                className="w-56 h-auto pointer-events-none"
+                style={{ imageRendering: "pixelated" }}
+              />
+              <p className="absolute mb-2 inset-0 flex items-center justify-center text-center px-5 text-[12px] font-bold text-[#3C3C3C] leading-snug">
+                {getCharacterMessage(riskChangeSummary)}
+              </p>
+            </div>
+          )}
+          <Character
+            level={character?.level ?? 1}
+            mood={character?.mood ?? "normal"}
+            size="xl"
+            showPlatform={false}
+            animated
+            className="drop-shadow-xl"
           />
         </div>
 
         {/* 캐릭터 이름 + 레벨 + 기분 */}
-        <div className="flex items-center gap-2.5 mt-3 mb-4">
+        <div className="flex items-center gap-2.5 mt-3 mb-4 z-2">
           <h1 className="text-[22px] font-black text-[#1A2E1C] leading-none tracking-[-0.5px]">
             {character?.name ?? "알"}
           </h1>
@@ -664,7 +729,7 @@ export function HomeScreen() {
         </div>
 
         {/* XP 바 — 두꺼운 스트라이프 스타일 */}
-        <div className="w-full mb-5">
+        <div className="w-full mb-5 z-2">
           {/* 라벨 행 */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-[#3E8C28] uppercase tracking-[0.06em]">
@@ -842,7 +907,7 @@ export function HomeScreen() {
 
               {/* fallback 메시지 (데이터 부족 등) */}
               {fallbackMessage && (
-                <div className="rounded-2xl bg-[#FFFDF0] border border-[#FFF383] p-4 flex items-start gap-3 mb-3">
+                <div className="rounded-2xl bg-[#FFFDF0] border border-[#FFF383] p-4 flex items-start gap-3 mb-3 ">
                   <div className="size-7 rounded-lg bg-[#FFF383] flex items-center justify-center shrink-0 mt-0.5">
                     <Sparkles className="size-3.5 text-[#8C7010]" />
                   </div>
@@ -856,7 +921,7 @@ export function HomeScreen() {
               <div
                 ref={sliderRef}
                 onScroll={handleSliderScroll}
-                className="rec-slider flex overflow-x-auto"
+                className="rec-slider flex overflow-x-auto "
                 style={{
                   scrollSnapType: "x mandatory",
                   scrollbarWidth: "none",
@@ -867,8 +932,13 @@ export function HomeScreen() {
               >
                 {displayRecs.map((rec, idx) => (
                   <div
+                    className="rounded-lg shadow-[0_2px_16px_rgba(0,0,0,0.07)]"
                     key={rec.id}
-                    style={{ scrollSnapAlign: "start", minWidth: "100%", width: "100%" }}
+                    style={{
+                      scrollSnapAlign: "start",
+                      minWidth: "100%",
+                      width: "100%",
+                    }}
                   >
                     <RecCard rec={rec} index={idx} />
                   </div>
@@ -887,7 +957,8 @@ export function HomeScreen() {
                       style={{
                         width: currentRecIndex === idx ? 20 : 6,
                         height: 6,
-                        backgroundColor: currentRecIndex === idx ? "#3E8C28" : "#D0D0D0",
+                        backgroundColor:
+                          currentRecIndex === idx ? "#3E8C28" : "#D0D0D0",
                       }}
                     />
                   ))}

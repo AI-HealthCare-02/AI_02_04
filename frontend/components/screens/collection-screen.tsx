@@ -61,14 +61,12 @@ export function CollectionScreen() {
             <h1 className="text-[18px] font-bold text-[#3C3C3C] leading-snug">
               추억 보관함
             </h1>
-            <p className="text-[13px] text-[#7A7A7A] font-medium">
-              별나라로 떠난 친구들
-            </p>
+            <p className="text-[13px] text-[#7A7A7A] font-medium">도감</p>
           </div>
           {/* 졸업 수 뱃지 */}
           <div className="flex items-center gap-1 bg-[#FFF383] rounded-full px-3 py-1.5">
-            <Star className="size-3.5 text-[#8C7010] fill-current" />
-            <span className="text-[13px] font-bold text-[#8C7010]">
+            <Star className="size-3.5 text-[#EDA35A] fill-current" />
+            <span className="text-[13px] font-bold text-[#EDA35A]">
               {graduatedCharacters.length}
             </span>
           </div>
@@ -131,20 +129,19 @@ export function CollectionScreen() {
             {canGraduate && (
               <div className="mx-5 mb-5 px-4 py-3 bg-[#FFF9D6] rounded-2xl border border-[#FFF383]">
                 <p className="text-[12px] font-bold text-[#8C6010] text-center">
-                  🎉 축하해요! {character.name}이(가) 별나라로 떠날 준비가
-                  됐어요!
+                  축하해요! {character.name}이(가) 성장을 마쳤어요!
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* ── 별나라의 친구들 ── */}
+        {/* ── 졸업한 친구들 ── */}
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <Star className="size-4 text-[#8C7010] fill-[#FFF383]" />
             <p className="text-[12px] font-bold text-[#6A6A6A] uppercase tracking-[0.05em]">
-              별나라의 친구들
+              내 당마고치
             </p>
           </div>
 
@@ -161,7 +158,7 @@ export function CollectionScreen() {
                 <p className="text-[13px] text-[#7A7A7A] leading-relaxed">
                   캐릭터를 레벨 5까지 키워서
                   <br />
-                  별나라로 보내보세요!
+                  수집해 보세요!
                 </p>
               </div>
             </div>
@@ -218,11 +215,11 @@ export function CollectionScreen() {
             <Sparkles className="size-7 text-[#D97706]" strokeWidth={2} />
           </div>
 
-          <DialogTitle className="text-center">별나라 졸업식 🌟</DialogTitle>
+          <DialogTitle className="text-center">성장 완료</DialogTitle>
           <p className="text-[13px] text-[#7A7A7A] leading-normal text-center mt-1">
             함께 한 시간 동안 정말 고마웠어요.
             <br />
-            이제 별나라에서 행복하게 지낼 거예요!
+            이제 추억 보관함에서 다시 만날 수 있어요!
           </p>
 
           {/* 캐릭터 */}
