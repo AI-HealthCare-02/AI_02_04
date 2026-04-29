@@ -56,13 +56,13 @@ jobs:
       - name: Deploy to S3
         run: |
           # HTML은 캐시 안 함 (항상 최신 index.html을 받도록)
-          aws s3 sync dist/ s3://dangmagoapp-frontend \
+          aws s3 sync dist/ s3://dangmatgochiapp-frontend \
             --delete \
             --exclude "*.html" \
             --cache-control "public, max-age=31536000, immutable"
 
           # HTML만 별도로 캐시 없이 업로드
-          aws s3 sync dist/ s3://dangmagoapp-frontend \
+          aws s3 sync dist/ s3://dangmatgochiapp-frontend \
             --exclude "*" \
             --include "*.html" \
             --cache-control "no-cache, no-store, must-revalidate"
