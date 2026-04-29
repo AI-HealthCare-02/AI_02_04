@@ -404,7 +404,7 @@ function MissionRow({
           />
         </div>
       </div>
-      <div className="shrink-0 w-[52px] flex justify-end">
+      <div className="shrink-0 w-[45px] flex justify-end">
         {completed ? (
           <CheckCircle2 className="size-5 text-[#87D57B]" />
         ) : action ? (
@@ -486,13 +486,17 @@ export function HomeScreen() {
           setDisplayRecs(mapped.length > 0 ? mapped : AI_RECOMMENDATIONS);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setDisplayRecs(AI_RECOMMENDATIONS);
+      });
     fetchCharacter()
       .then((data) => {
         setOverallState(data.character_state.overall_state);
         setRiskChangeSummary(data.risk_change_summary);
       })
-      .catch(() => {});
+      .catch(() => {
+        // 캐릭터 조회 실패 시 기존 상태 유지
+      });
   }, [userProfile?.id]);
 
   /* ── 걷기 미션 자동 증가 ── */
