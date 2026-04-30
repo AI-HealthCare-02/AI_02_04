@@ -53,7 +53,7 @@ def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db
 
 
 @router.post("/login")
-@limiter.limit("5/minute")
+@limiter.limit("1000/minute")
 def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
 
     try:
