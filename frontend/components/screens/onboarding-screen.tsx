@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Character, CharacterEgg } from "@/components/character";
+import { Character } from "@/components/character";
 import {
   Heart,
   Target,
@@ -101,7 +101,12 @@ export function OnboardingScreen() {
           />
           <div className="relative">
             {slide.character === "egg" ? (
-              <CharacterEgg size="xl" animated />
+              <img
+                src="/img-egg-1.png"
+                alt="알"
+                className="w-40 h-40 object-contain animate-bounce-gentle"
+                style={{ imageRendering: "pixelated" }}
+              />
             ) : (
               <Character
                 mood={slide.character as "normal" | "happy"}

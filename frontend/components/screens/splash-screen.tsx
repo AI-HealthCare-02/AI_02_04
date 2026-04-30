@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
-import { CharacterEgg } from "@/components/character";
+import { Character } from "@/components/character";
 import { initKakao } from "@/lib/kakao";
 
 export function SplashScreen() {
@@ -37,11 +37,20 @@ export function SplashScreen() {
           </p>
         </div>
 
-        {/* 캐릭터 */}
+        {/* 캐릭터 또는 알 */}
         <div className="relative">
           <div className="absolute inset-0 rounded-full bg-[#CBF891]/50 blur-2xl scale-110" />
           <div className="relative">
-            <CharacterEgg size="xl" animated />
+            {character ? (
+              <Character size="xl" animated showPlatform={false} />
+            ) : (
+              <img
+                src="/img-egg-1.png"
+                alt="알"
+                className="w-40 h-40 object-contain animate-bounce-gentle"
+                style={{ imageRendering: "pixelated" }}
+              />
+            )}
           </div>
         </div>
 
