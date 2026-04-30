@@ -9,7 +9,11 @@ class DangmagoUser(HttpUser):
             "email" : "test@test.com",
             "password" : "test1234"
         })
-        self.token = response.json()["access_token"]
+        
+        if response.status_code == 200:
+            self.token = response.json()["data"]["access_token"]
+        else:
+            self.token = None
         
     
     @task(1)
