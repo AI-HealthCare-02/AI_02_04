@@ -42,7 +42,10 @@ export function LoginScreen() {
 
   /* ── 이메일 로그인 ── */
   const handleEmailLogin = async () => {
-    if (!email || !password) return;
+    if (!email || !password) {
+      setEmailError("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
     setLoginLoading(true);
     setEmailError("");
     try {
