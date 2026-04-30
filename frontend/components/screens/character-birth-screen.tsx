@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Character, CharacterEgg } from '@/components/character';
+import { Character } from '@/components/character';
+import { getRandomEggSrc } from '@/lib/character-images';
 import { Sparkles, Heart, Star, Egg } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,7 @@ export function CharacterBirthScreen() {
   const [characterName, setCharacterName] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
 
+  const eggSrc = useMemo(() => getRandomEggSrc(), []);
   const currentIdx = STAGE_INDEX[stage];
 
   const handleTapEgg = () => {
@@ -140,7 +142,15 @@ export function CharacterBirthScreen() {
           <div className="relative">
             {stage === 'egg' || stage === 'hatching' ? (
               <div className={cn(stage === 'hatching' && 'animate-bounce')}>
-                <CharacterEgg size="xl" animated={stage === 'egg'} />
+                <img
+                  src={eggSrc}
+                  alt="알"
+                  className={cn(
+                    "w-40 h-40 object-contain",
+                    stage === 'egg' && 'animate-bounce-gentle',
+                  )}
+                  style={{ imageRendering: "pixelated" }}
+                />
               </div>
             ) : (
               <Character mood="happy" level={1} size="xl" />

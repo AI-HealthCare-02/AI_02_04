@@ -71,7 +71,6 @@ export function Character({
         )}
         style={{
           imageRendering: "pixelated",
-          mixBlendMode: "multiply",
         }}
       />
 

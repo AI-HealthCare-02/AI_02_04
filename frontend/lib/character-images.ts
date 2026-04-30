@@ -12,6 +12,15 @@ export const CHARACTER_IMAGES: Record<CharacterLevel, string> = {
 /** happy 말풍선 이미지 */
 export const HAPPY_BUBBLE = "/bubble-happy.png";
 
+/** 알 이미지 총 개수 */
+const EGG_COUNT = 2;
+
+/** 랜덤 알 이미지 경로 반환 */
+export function getRandomEggSrc(): string {
+  const n = Math.floor(Math.random() * EGG_COUNT) + 1;
+  return `/img-egg-${n}.png`;
+}
+
 /** 기분별 애니메이션 클래스 */
 export const MOOD_ANIMATIONS: Record<CharacterMood, string> = {
   happy:  "animate-bounce-gentle",

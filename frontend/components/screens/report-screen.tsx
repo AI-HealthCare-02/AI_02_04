@@ -178,7 +178,7 @@ function RedesignCard({
             className="flex-1 h-10 text-[13px] font-bold rounded-xl bg-[#2878B0] hover:bg-[#1A5A8A] text-white border-0"
             onClick={() => setAccepted(true)}
           >
-            ✅ 적용하기
+            적용하기
           </Button>
           <Button
             variant="outline"
@@ -190,7 +190,7 @@ function RedesignCard({
         </div>
       ) : accepted ? (
         <div className="text-center py-2.5 bg-[#E8F9D6] rounded-xl text-[13px] font-bold text-[#3E8C28]">
-          ✅ 챌린지가 재설계되었습니다
+          챌린지가 재설계되었습니다
         </div>
       ) : (
         <div className="text-center py-2.5 bg-[#F5F5F5] rounded-xl text-[13px] font-medium text-[#9B9B9B]">
@@ -283,7 +283,9 @@ export function ReportScreen() {
     return recent.map((entry, i) => ({
       text: entry.food_name ?? "식단",
       size: SIZES[Math.min(i, SIZES.length - 1)],
-      healthy: HEALTHY_KEYWORDS.some((k) => (entry.food_name ?? "").includes(k)),
+      healthy: HEALTHY_KEYWORDS.some((k) =>
+        (entry.food_name ?? "").includes(k),
+      ),
     }));
   }, [dietEntries]);
 
