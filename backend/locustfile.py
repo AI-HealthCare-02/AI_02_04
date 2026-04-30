@@ -25,6 +25,13 @@ class DangmagoUser(HttpUser):
         
         pass
 
+    @task(2)
+    def get_dashboard(self):
+        self.client.get(
+            "/dashboard",
+            headers={"Authorization": f"Bearer {self.token}"}
+        )
+
     @task(3)
     def log_challenges(self):
         response = self.client.post(
