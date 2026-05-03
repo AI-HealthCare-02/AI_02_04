@@ -1,12 +1,15 @@
-version: '3.9'
+version: "3.9"
 
 x-airflow-common: &airflow-common
   image: apache/airflow:2.8.0
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-    AIRFLOW__CORE__FERNET_KEY: ''
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__FERNET_KEY: ""
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    DANGMAGO_DB_URL: postgresql+psycopg2://postgres:Dangma2026!@dangmago-db.c9q020ciesrm.ap-northeast-2.rds.amazonaws.com:5432/dangmago?sslmode=require
+    BACKEND_URL: https://api.dangmagoapp.shop
+    INTERNAL_API_KEY: dangmago-internal-2026
   volumes:
     - ./dags:/opt/airflow/dags
   depends_on:
@@ -28,23 +31,23 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: >
-      bash -c "airflow db init &&
-               airflow users create
-               --username admin
-               --password admin
-               --firstname Admin
-               --lastname User
-               --role Admin
-               --email admin@example.com"
-
+    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com"
   airflow-webserver:
     <<: *airflow-common
     ports:
       - "8080:8080"
     command: webserver
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
-
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
