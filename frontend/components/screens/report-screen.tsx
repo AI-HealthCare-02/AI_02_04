@@ -215,7 +215,7 @@ function getWeekLabel() {
 }
 
 export function ReportScreen() {
-  const { setScreen, missions, dietEntries } = useAppStore();
+  const { setScreen, missions, dietEntries, userProfile } = useAppStore();
   const { toast } = useToast();
   const isScrolled = useScrollHeader();
   const [reportData, setReportData] = useState<WeeklyReportResponse | null>(
@@ -322,6 +322,15 @@ export function ReportScreen() {
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (weeklyScore / 100) * circumference;
+
+  // 연속 미션 달성 주수 — userProfile.streak(일) → 주 단위 변환 (최소 1주)
+  const streakWeeks = Math.max(1, Math.floor((userProfile?.streak ?? 0) / 7));
+
+  // 도넛 차트 strokeDasharray — 실제 nutritionAvg 기반으로 동적 계산
+  // SVG 원 둘레 ≈ 2π × 15.9 ≈ 99.9, 각 pct(%) ≈ strokeDasharray 값
+  const donutCarbs   = nutritionAvg.carbs;
+  const donutProtein = nutritionAvg.protein;
+  const donutFat     = Math.max(0, 100 - donutCarbs - donutProtein);
 
   // 섹션 레이블 컴포넌트
   const SectionLabel = ({
@@ -595,11 +604,13 @@ export function ReportScreen() {
           />
 
           <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 space-y-4">
-            {/* 연속 달성 배너 */}
+            {/* 연속 달성 배너 — userProfile.streak 기반 주 단위 환산 */}
             <div className="flex items-center gap-3 bg-[#F0FDF4] rounded-xl px-4 py-3 border border-[#CBF891]">
               <span className="text-[18px]">🔥</span>
               <p className="text-[14px] font-bold text-[#2A6020]">
-                3주 연속 주간 목표 달성 중!
+                {streakWeeks > 1
+                  ? `${streakWeeks}주 연속 주간 목표 달성 중!`
+                  : "이번 주 목표를 향해 달려가는 중!"}
               </p>
             </div>
 
@@ -671,6 +682,7 @@ export function ReportScreen() {
               {/* 도넛 차트 */}
               <div className="relative size-24 shrink-0">
                 <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                  {/* 탄수화물 */}
                   <circle
                     cx="18"
                     cy="18"
@@ -678,8 +690,9 @@ export function ReportScreen() {
                     fill="none"
                     stroke="#FFF383"
                     strokeWidth="4"
-                    strokeDasharray="50 50"
+                    strokeDasharray={`${donutCarbs} ${100 - donutCarbs}`}
                   />
+                  {/* 단백질 */}
                   <circle
                     cx="18"
                     cy="18"
@@ -687,9 +700,10 @@ export function ReportScreen() {
                     fill="none"
                     stroke="#FFB8CA"
                     strokeWidth="4"
-                    strokeDasharray="30 70"
-                    strokeDashoffset="-50"
+                    strokeDasharray={`${donutProtein} ${100 - donutProtein}`}
+                    strokeDashoffset={`-${donutCarbs}`}
                   />
+                  {/* 지방 */}
                   <circle
                     cx="18"
                     cy="18"
@@ -697,8 +711,8 @@ export function ReportScreen() {
                     fill="none"
                     stroke="#AEE1F9"
                     strokeWidth="4"
-                    strokeDasharray="20 80"
-                    strokeDashoffset="-80"
+                    strokeDasharray={`${donutFat} ${100 - donutFat}`}
+                    strokeDashoffset={`-${donutCarbs + donutProtein}`}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
