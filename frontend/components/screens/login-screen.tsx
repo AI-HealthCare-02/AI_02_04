@@ -70,33 +70,31 @@ export function LoginScreen() {
     setNaverLoading(true);
     setNaverError("");
     try {
-      const info = await naverLogin();
-      console.info("[Naver] 로그인 성공:", info.name, info.email);
+      const result = await naverLogin();
 
-      if (isReturningUser) {
-        // 기존 유저 → 바로 홈
+      if (result.status === "existing") {
+        setAuthToken(result.accessToken!);
+        setRefreshToken(result.refreshToken!);
+        setTokens(result.accessToken!, result.refreshToken!);
         setIsAuthenticated(true);
         setScreen("home");
       } else {
-        // 신규 유저 → 네이버 정보 저장 후 회원가입
         setNaverProfile({
-          id: info.id,
-          email: info.email,
-          name: info.name,
-          gender: info.gender,
-          age: info.age,
-          birthyear: info.birthyear,
+          id: result.naverId!,
+          email: result.email,
+          name: result.name,
+          gender: result.gender as "M" | "F" | undefined,
+          age: result.age,
+          birthyear: result.birthyear,
         });
         setScreen("health-info");
       }
-    } catch (err) {
-      console.error("[Naver] 로그인 실패:", err);
-      setNaverError("네이버 로그인에 실패했습니다. 다시 시도해주세요.");
+    } catch (err: any) {
+      setNaverError(err?.message ?? "네이버 로그인에 실패했습니다.");
     } finally {
       setNaverLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-background flex flex-col px-6">
       {/* ── 캐릭터 + 타이틀 ── */}

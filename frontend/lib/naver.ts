@@ -1,70 +1,46 @@
-/* ──────────────────────────────────────────────────────────────
-   네이버 OAuth 2.0 로그인
-   - VITE_NAVER_CLIENT_ID 설정 시: 실제 팝업 로그인
-   - 미설정 시: 개발용 Mock 사용자 반환
-────────────────────────────────────────────────────────────── */
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-export interface NaverUserInfo {
-  id: string;
-  email?: string;
+export interface NaverLoginResult {
+  status: "new" | "existing";
+  // 신규 유저
+  naverId?: string;
   name?: string;
+  email?: string;
   gender?: "M" | "F";
-  age?: string;       // e.g. "20-29"
+  age?: string;
   birthyear?: string;
+  // 기존 유저
+  accessToken?: string;
+  refreshToken?: string;
 }
 
-const CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID as string | undefined;
+export function naverLogin(): Promise<NaverLoginResult> {
+  return new Promise(async (resolve, reject) => {
+    // 1) 백엔드에서 OAuth URL 받기
+    const res = await fetch(`${BASE_URL}/auth/naver/login`);
+    const json = await res.json();
+    const { url } = json.data;
 
-function getRedirectUri(): string {
-  return `${typeof window !== "undefined" ? window.location.origin : ""}/naver-callback.html`;
-}
+    // 2) 팝업 열기
+    const popup = window.open(
+      url,
+      "naver-login",
+      "width=480,height=640,left=200,top=100",
+    );
 
-/* ──────────────────────────────────────────────────────────────
-   로그인
-────────────────────────────────────────────────────────────── */
-export function naverLogin(): Promise<NaverUserInfo> {
-  // 개발 Mock 모드 (CLIENT_ID 없을 때)
-  if (!CLIENT_ID || typeof window === "undefined") {
-    console.warn("[Naver] VITE_NAVER_CLIENT_ID 없음 → dev mock 반환");
-    return Promise.resolve({
-      id: "naver_dev_12345",
-      email: "naver_dev@example.com",
-      name: "네이버유저",
-      gender: "M" as const,
-      age: "20-29",
-      birthyear: "1995",
-    });
-  }
-
-  return new Promise((resolve, reject) => {
-    const state = crypto.randomUUID();
-    const redirectUri = getRedirectUri();
-    const url =
-      `https://nid.naver.com/oauth2.0/authorize` +
-      `?response_type=code` +
-      `&client_id=${CLIENT_ID}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${state}`;
-
-    const popup = window.open(url, "naver-login", "width=480,height=640,left=200,top=100");
-
+    // 3) 팝업에서 postMessage 수신
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== "NAVER_LOGIN") return;
-
       window.removeEventListener("message", handler);
       clearInterval(timer);
-
-      if (event.data.error) {
-        reject(new Error(event.data.error));
-      } else {
-        resolve(event.data.userInfo ?? { id: "naver_" + event.data.state });
-      }
+      event.data.error
+        ? reject(new Error(event.data.error))
+        : resolve(event.data);
     };
-
     window.addEventListener("message", handler);
 
-    // 팝업이 닫히면 취소로 처리
+    // 4) 팝업 강제 닫힘 감지
     const timer = setInterval(() => {
       if (popup?.closed) {
         clearInterval(timer);
@@ -73,11 +49,4 @@ export function naverLogin(): Promise<NaverUserInfo> {
       }
     }, 500);
   });
-}
-
-/* ──────────────────────────────────────────────────────────────
-   로그아웃 (네이버는 클라이언트 측 로그아웃 별도 처리 불필요)
-────────────────────────────────────────────────────────────── */
-export function naverLogout(): Promise<void> {
-  return Promise.resolve();
 }
