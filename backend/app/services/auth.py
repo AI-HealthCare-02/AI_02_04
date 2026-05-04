@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.user import User, UserType, GoalType, RiskLevel, DiabetesType
-from app.schemas.auth import RegisterRequest, KakaoRegisterRequest
+from app.schemas.auth import RegisterRequest, KakaoRegisterRequest, NaverRegisterRequest
 from app.services.challenge import create_default_challenges
 
 
@@ -110,6 +110,7 @@ def register_user(db: Session, data: RegisterRequest) -> User:
     return user
 
 
+
 def register_kakao_user(
     db: Session,
     data: KakaoRegisterRequest,
@@ -161,6 +162,58 @@ def register_kakao_user(
 
     return user
 
+
+
+def register_naver_user(
+    db: Session,
+    data: NaverRegisterRequest,
+) -> User:
+    existing_user = db.query(User).filter(User.naver_id == data.naver_id).first()
+    if existing_user:
+        raise ValueError("이미 가입된 네이버 계정입니다.")
+
+    bmi = calc_bmi(data.height, data.weight)
+
+    user_type = UserType(data.user_type)
+    goal = GoalType(data.goal) if data.goal else None
+    diabetes_type = DiabetesType(data.diabetes_type) if data.diabetes_type else None
+    risk_level = None
+
+    user = User(
+        naver_id=data.naver_id,
+        email = data.email if data.email else f"naver_{data.naver_id}@dangmago.com",
+        password="",
+        nickname=data.nickname,
+        age=data.age,
+        gender=data.gender,
+        height=data.height,
+        weight=data.weight,
+        bmi=bmi,
+        user_type=user_type,
+        goal=goal,
+        diabetes_type=diabetes_type,
+        risk_level=risk_level,
+        # ML 피처
+        is_hypertension=data.is_hypertension,
+        is_cholesterol=data.is_cholesterol,
+        is_heart_disease=data.is_heart_disease,
+        walking_difficulty=data.walking_difficulty,
+        general_health=data.general_health,
+        alcohol_status=data.alcohol_status,
+        # LLM 피처
+        smoke_status=data.smoke_status,
+        exercise_freq=data.exercise_freq,
+        fruit_intake=data.fruit_intake,
+        veggie_intake=data.veggie_intake,
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    create_default_challenges(db, user)
+
+    return user
 
 def signin_user(db: Session, email: str, password: str) -> User:
     user = db.query(User).filter(User.email == email).first()

@@ -14,6 +14,7 @@ from app.schemas.auth import (
     RegisterResponse,
     TokenResponse,
     KakaoRegisterRequest,
+    NaverRegisterRequest
 )
 from app.services import auth as auth_service
 from app.core.config import settings
@@ -274,25 +275,25 @@ async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
         }
 
 
-# @router.post("/naver/register", status_code=201)
-# def naver_register(data: NaverRegisterRequest, db: Session = Depends(get_db)):
-#     try:
-#         user = auth_service.register_naver_user(db, data)
-#     except ValueError as err:
-#         raise HTTPException(status_code=400, detail=str(err))
+@router.post("/naver/register", status_code=201)
+def naver_register(data: NaverRegisterRequest, db: Session = Depends(get_db)):
+    try:
+        user = auth_service.register_naver_user(db, data)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
 
-#     access_token = auth_service.create_access_token(user)
-#     refresh_token = auth_service.create_refresh_token(user)
+    access_token = auth_service.create_access_token(user)
+    refresh_token = auth_service.create_refresh_token(user)
 
-#     return {
-#         "success": True,
-#         "data": {
-#             "user_id": user.id,
-#             "user_type": user.user_type.value,
-#             "access_token": access_token,
-#             "refresh_token": refresh_token,
-#         },
-#     }
+    return {
+        "success": True,
+        "data": {
+            "user_id": user.id,
+            "user_type": user.user_type.value,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        },
+    }
 
 
 @router.delete("/me")
