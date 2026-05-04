@@ -1,6 +1,7 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { fetchWeeklyReport } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ScrollHeader } from "@/components/ui/scroll-header";
 import { useScrollHeader } from "@/hooks/use-scroll-header";
@@ -15,25 +16,24 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const generateMockReports = () => {
-  const reports = [];
+// 시드 기반 결정론적 점수 — Math.random() 제거로 새로고침마다 바뀌는 문제 해결
+const FIXED_SCORES = [82, 78, 85, 73, 90, 76, 88, 81, 74, 79, 83, 77, 86, 71, 80, 75, 84, 88, 72, 90, 78, 85, 76, 82, 79];
+const FIXED_DIFFS  = [ 3, -2,  0,  4, -1,  2, -3,  1,  0,  2, -1,  3, -2,  1,  0,  4, -1, -3,  2,  1, -2,  3,  0, -1,  2];
+
+const generateBaseReports = () => {
   const today = new Date();
-  for (let i = 0; i < 25; i++) {
+  return Array.from({ length: 25 }, (_, i) => {
     const reportDate = new Date(today);
     reportDate.setDate(today.getDate() - i * 7);
-    reports.push({
+    return {
       id: `report-${i}`,
       title: i === 0 ? "이번 주 건강 리포트" : `${i}주 전 건강 리포트`,
       date: reportDate,
-      score: Math.floor(Math.random() * 30 + 70),
-      diff: Math.floor(Math.random() * 11) - 5, // -5 ~ +5 점 변화
-      summary: "지난주보다 걷기 미션 달성률이 높아졌어요!",
-    });
-  }
-  return reports;
+      score: FIXED_SCORES[i] ?? 80,
+      diff:  FIXED_DIFFS[i]  ?? 0,
+    };
+  });
 };
-
-const mockReports = generateMockReports();
 
 // 점수별 색상 팔레트
 const getScoreStyle = (score: number) => {
@@ -48,13 +48,36 @@ export function ReportListScreen() {
   const isScrolled = useScrollHeader();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // 리포트 목록 — 결정론적 mock을 즉시 표시, 현재 주 점수는 API 응답 시 조용히 보정
+  const [reports, setReports] = useState(generateBaseReports);
+
+  useEffect(() => {
+    fetchWeeklyReport()
+      .then((data) => {
+        if (data.health_score != null) {
+          // 현재 주(index=0) 점수를 실제 API 값으로 교체
+          setReports((prev) => {
+            const next = [...prev];
+            next[0] = {
+              ...next[0],
+              score: data.health_score!,
+              // 전주 대비: 이번 주 실점수 - 1주 전 고정 점수
+              diff: data.health_score! - (FIXED_SCORES[1] ?? 80),
+            };
+            return next;
+          });
+        }
+      })
+      .catch(() => { /* API 실패 시 결정론적 mock 유지 */ });
+  }, []);
+
   const handlePrevMonth = () =>
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   const handleNextMonth = () =>
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
   const filteredReports = useMemo(() =>
-    mockReports
+    reports
       .filter(
         (r) =>
           r.date.getFullYear() === currentMonth.getFullYear() &&
@@ -174,7 +197,7 @@ export function ReportListScreen() {
                         </p>
                         {isFirst && (
                           <span className="shrink-0 text-[10px] font-bold bg-[#CBF891] text-[#3E8C28] px-2 py-0.5 rounded-full">
-                            NEW
+                            LIVE
                           </span>
                         )}
                       </div>
