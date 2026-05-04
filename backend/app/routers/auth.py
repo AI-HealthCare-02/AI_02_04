@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import httpx
 from datetime import datetime
@@ -20,13 +20,13 @@ from app.core.config import settings
 from jose import jwt, JWTError
 from app.models.user import User
 
-
 router = APIRouter()
 security = HTTPBearer()
 
+
 @router.post("/register", status_code=201)
 @limiter.limit("3/minute")
-def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, data: RegisterRequest, db: Session = Depends(get_db)):
     try:
         user = auth_service.register_user(db, data)
     except ValueError as err:
@@ -41,11 +41,11 @@ def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db
             "user_type": user.user_type.value,
             "risk_level": (
                 user.risk_level.value if user.risk_level else None
-            ),  # type:ignore
-            "goal": user.goal.value if user.goal else None,  # type:ignore
+            ),  # type: ignore
+            "goal": user.goal.value if user.goal else None,  # type: ignore
             "diabetes_type": (
                 user.diabetes_type.value if user.diabetes_type else None
-            ),  # type:ignore
+            ),  # type: ignore
             "access_token": access_token,
             "refresh_token": refresh_token,
         },
@@ -70,12 +70,12 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user_type": user.user_type.value,
-            "goal": user.goal.value if user.goal else None,  # type:ignore
+            "goal": user.goal.value if user.goal else None,  # type: ignore
             "risk_level": (
-                user.risk_level.value if user.risk_level else None  # type:ignore
+                user.risk_level.value if user.risk_level else None  # type: ignore
             ),
             "diabetes_type": (
-                user.diabetes_type.value if user.diabetes_type else None  # type:ignore
+                user.diabetes_type.value if user.diabetes_type else None  # type: ignore
             ),
         },
     }
@@ -197,12 +197,21 @@ def kakao_register(data: KakaoRegisterRequest, db: Session = Depends(get_db)):
     }
 
 
+@router.get("naver/login")
+def naver_login():
+    pass
 
-@router.delete('/me')
+
+@router.get("naver/callback")
+async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
+    pass
+
+
+@router.delete("/me")
 async def delete_user(
-    credentials : HTTPAuthorizationCredentials  = Depends(security),
-    current_user :dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.id == current_user["user_id"]).first()
     user.is_active = False
@@ -217,4 +226,4 @@ async def delete_user(
     # if ttl >0:
     #     await add_to_blacklist(token, ttl)
 
-    return {"success" :True, "message" : "회원탈퇴 완료 "}
+    return {"success": True, "message": "회원탈퇴 완료 "}
