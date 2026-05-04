@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import httpx
 from datetime import datetime
@@ -20,13 +20,13 @@ from app.core.config import settings
 from jose import jwt, JWTError
 from app.models.user import User
 
-
 router = APIRouter()
 security = HTTPBearer()
 
+
 @router.post("/register", status_code=201)
 @limiter.limit("3/minute")
-def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, data: RegisterRequest, db: Session = Depends(get_db)):
     try:
         user = auth_service.register_user(db, data)
     except ValueError as err:
@@ -41,11 +41,11 @@ def register(request:Request,data: RegisterRequest, db: Session = Depends(get_db
             "user_type": user.user_type.value,
             "risk_level": (
                 user.risk_level.value if user.risk_level else None
-            ),  # type:ignore
-            "goal": user.goal.value if user.goal else None,  # type:ignore
+            ),  # type: ignore
+            "goal": user.goal.value if user.goal else None,  # type: ignore
             "diabetes_type": (
                 user.diabetes_type.value if user.diabetes_type else None
-            ),  # type:ignore
+            ),  # type: ignore
             "access_token": access_token,
             "refresh_token": refresh_token,
         },
@@ -70,12 +70,12 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user_type": user.user_type.value,
-            "goal": user.goal.value if user.goal else None,  # type:ignore
+            "goal": user.goal.value if user.goal else None,  # type: ignore
             "risk_level": (
-                user.risk_level.value if user.risk_level else None  # type:ignore
+                user.risk_level.value if user.risk_level else None  # type: ignore
             ),
             "diabetes_type": (
-                user.diabetes_type.value if user.diabetes_type else None  # type:ignore
+                user.diabetes_type.value if user.diabetes_type else None  # type: ignore
             ),
         },
     }
@@ -197,12 +197,109 @@ def kakao_register(data: KakaoRegisterRequest, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/naver/login")
+def naver_login():
+    state = "random_state_string"
+    naver_auth_url = (
+        f"https://nid.naver.com/oauth2.0/authorize"
+        f"?response_type=code"
+        f"&client_id={settings.NAVER_CLIENT_ID}"
+        f"&redirect_uri={settings.NAVER_REDIRECT_URI}"
+        f"&state={state}"
+    )
+    return {"url": naver_auth_url}
 
-@router.delete('/me')
+
+@router.get("/naver/callback")
+async def naver_callback(code: str, state: str, db: Session = Depends(get_db)):
+    async with httpx.AsyncClient() as client:
+        token_response = await client.post(
+            "https://nid.naver.com/oauth2.0/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": settings.NAVER_CLIENT_ID,
+                "redirect_uri": settings.NAVER_REDIRECT_URI,
+                "code": code,
+                "client_secret": settings.NAVER_CLIENT_SECRET,
+            },
+        )
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+
+        user_response = await client.get(
+            "https://openapi.naver.com/v1/nid/me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        user_info = user_response.json().get("response", {})
+
+        naver_id = str(user_info.get("id"))
+        nickname = user_info.get("nickname")
+        email = user_info.get("email")
+        gender = 1 if user_info.get("gender") == "M" else 0
+        birthday = user_info.get("birthday")
+        birthyear = user_info.get("birthyear")
+        age_range = user_info.get("age")
+
+        age = None
+        if age_range:
+            age = int(age_range.split("-")[0]) + 5
+
+        user = db.query(User).filter(User.naver_id == naver_id).first()
+
+        if not user:
+            return {
+                "success": True,
+                "data": {
+                    "is_new_user": True,
+                    "naver_id": naver_id,
+                    "nickname": nickname,
+                    "email": email,
+                    "gender": gender,
+                    "age": age,
+                    "birthday": birthday,
+                    "birthyear": birthyear,
+                },
+            }
+
+        access_token = auth_service.create_access_token(user)
+        refresh_token = auth_service.create_refresh_token(user)
+        return {
+            "success": True,
+            "data": {
+                "is_new_user": False,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user_type": user.user_type.value,
+            },
+        }
+
+
+# @router.post("/naver/register", status_code=201)
+# def naver_register(data: NaverRegisterRequest, db: Session = Depends(get_db)):
+#     try:
+#         user = auth_service.register_naver_user(db, data)
+#     except ValueError as err:
+#         raise HTTPException(status_code=400, detail=str(err))
+
+#     access_token = auth_service.create_access_token(user)
+#     refresh_token = auth_service.create_refresh_token(user)
+
+#     return {
+#         "success": True,
+#         "data": {
+#             "user_id": user.id,
+#             "user_type": user.user_type.value,
+#             "access_token": access_token,
+#             "refresh_token": refresh_token,
+#         },
+#     }
+
+
+@router.delete("/me")
 async def delete_user(
-    credentials : HTTPAuthorizationCredentials  = Depends(security),
-    current_user :dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.id == current_user["user_id"]).first()
     user.is_active = False
@@ -217,4 +314,4 @@ async def delete_user(
     # if ttl >0:
     #     await add_to_blacklist(token, ttl)
 
-    return {"success" :True, "message" : "회원탈퇴 완료 "}
+    return {"success": True, "message": "회원탈퇴 완료 "}
