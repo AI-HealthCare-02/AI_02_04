@@ -35,7 +35,8 @@ class User(Base, TimestampMixin):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     kakao_id = Column(String, unique=True, nullable=True)
-
+    naver_id = Column(String, unique=True, nullable=True)
+    
     nickname = Column(String(100), nullable=False)
     age = Column(Integer, nullable=True)
     gender = Column(Integer, nullable=True)  # 0=여, 1=남
