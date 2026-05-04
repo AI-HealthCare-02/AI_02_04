@@ -51,6 +51,30 @@ class KakaoRegisterRequest(BaseModel):
 
     occupation: Optional[str] = None
 
+class NaverRegisterRequest(BaseModel):
+    naver_id: str
+    nickname: str
+    email: Optional[str] = None
+    user_type: str
+    goal: Optional[str] = None
+    diabetes_type: Optional[str] = None
+    gender: int
+    age: int
+    height: float
+    weight: float
+    is_hypertension: bool
+    is_cholesterol: bool
+    is_heart_disease: bool
+    walking_difficulty: bool
+    general_health: int
+    alcohol_status: bool
+    smoke_status: Optional[bool] = None
+    exercise_freq: Optional[int] = None
+    fruit_intake: Optional[bool] = None
+    veggie_intake: Optional[bool] = None
+    occupation: Optional[str] = None
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
