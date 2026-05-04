@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Character } from "@/components/character";
-import { kakaoLogin } from "@/lib/kakao";
+import { naverLogin } from "@/lib/naver";
 import { loginUser } from "@/lib/api/auth";
 import { setAuthToken, setRefreshToken } from "@/lib/api/client";
 
-/* ── 카카오 로고 SVG ─────────────────────────────────────── */
-function KakaoLogo({ className }: { className?: string }) {
+/* ── 네이버 로고 SVG ─────────────────────────────────────── */
+function NaverLogo({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.6 5.08 4.02 6.53L5.1 20.6a.37.37 0 0 0 .54.41l3.96-2.63A11.6 11.6 0 0 0 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3Z" />
+      <path d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z" />
     </svg>
   );
 }
@@ -24,7 +24,7 @@ export function LoginScreen() {
     character,
     setScreen,
     setIsAuthenticated,
-    setKakaoProfile,
+    setNaverProfile,
     setTokens,
     autoLogin,
     setAutoLogin,
@@ -35,8 +35,8 @@ export function LoginScreen() {
   const [showPw, setShowPw] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-  const [kakaoLoading, setKakaoLoading] = useState(false);
-  const [kakaoError, setKakaoError] = useState("");
+  const [naverLoading, setNaverLoading] = useState(false);
+  const [naverError, setNaverError] = useState("");
 
   const isReturningUser = !!(userProfile && character);
 
@@ -65,36 +65,35 @@ export function LoginScreen() {
     }
   };
 
-  /* ── 카카오 로그인 ── */
-  const handleKakaoLogin = async () => {
-    setKakaoLoading(true);
-    setKakaoError("");
+  /* ── 네이버 로그인 ── */
+  const handleNaverLogin = async () => {
+    setNaverLoading(true);
+    setNaverError("");
     try {
-      const info = await kakaoLogin();
-      const kakaoName = info.kakao_account?.profile?.nickname ?? "";
-      const kakaoEmail = info.kakao_account?.email ?? "";
-      console.info("[Kakao] 로그인 성공:", kakaoName, kakaoEmail);
+      const info = await naverLogin();
+      console.info("[Naver] 로그인 성공:", info.name, info.email);
 
       if (isReturningUser) {
         // 기존 유저 → 바로 홈
         setIsAuthenticated(true);
         setScreen("home");
       } else {
-        // 신규 유저 → 카카오 정보 저장 후 회원가입
-        setKakaoProfile({
+        // 신규 유저 → 네이버 정보 저장 후 회원가입
+        setNaverProfile({
           id: info.id,
-          email: kakaoEmail,
-          name: kakaoName,
-          gender: info.kakao_account?.gender,
-          ageRange: info.kakao_account?.age_range,
+          email: info.email,
+          name: info.name,
+          gender: info.gender,
+          age: info.age,
+          birthyear: info.birthyear,
         });
         setScreen("health-info");
       }
     } catch (err) {
-      console.error("[Kakao] 로그인 실패:", err);
-      setKakaoError("카카오 로그인에 실패했습니다. 다시 시도해주세요.");
+      console.error("[Naver] 로그인 실패:", err);
+      setNaverError("네이버 로그인에 실패했습니다. 다시 시도해주세요.");
     } finally {
-      setKakaoLoading(false);
+      setNaverLoading(false);
     }
   };
 
@@ -239,39 +238,39 @@ export function LoginScreen() {
           <div className="flex-1 h-px bg-border" />
         </div>
 
-        {/* 카카오 버튼 (작게, 중앙 정렬) */}
+        {/* 네이버 버튼 (작게, 중앙 정렬) */}
         <div className="flex justify-center pb-2">
           <button
-            onClick={handleKakaoLogin}
-            disabled={kakaoLoading}
+            onClick={handleNaverLogin}
+            disabled={naverLoading}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-bold transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: "#FEE500", color: "#3C1E1E" }}
+            style={{ backgroundColor: "#03C75A", color: "#ffffff" }}
           >
-            {kakaoLoading ? (
+            {naverLoading ? (
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="size-1.5 rounded-full bg-[#3C1E1E]/40 animate-bounce"
+                    className="size-1.5 rounded-full bg-white/60 animate-bounce"
                     style={{ animationDelay: `${i * 150}ms` }}
                   />
                 ))}
               </div>
             ) : (
               <>
-                <KakaoLogo className="size-4" />
-                카카오로 계속하기
+                <NaverLogo className="size-4" />
+                네이버로 간편로그인
               </>
             )}
           </button>
         </div>
 
-        {/* 카카오 에러 */}
-        {kakaoError && (
+        {/* 네이버 에러 */}
+        {naverError && (
           <div className="flex items-center gap-2 bg-destructive/10 rounded-2xl px-4 py-3 border border-destructive/20">
             <AlertCircle className="size-4 text-destructive shrink-0" />
             <p className="text-[13px] font-medium text-destructive">
-              {kakaoError}
+              {naverError}
             </p>
           </div>
         )}

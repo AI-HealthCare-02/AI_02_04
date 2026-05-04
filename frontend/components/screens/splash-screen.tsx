@@ -1,14 +1,10 @@
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { Character } from "@/components/character";
-import { initKakao } from "@/lib/kakao";
-
 export function SplashScreen() {
   const { setScreen, userProfile, character, autoLogin } = useAppStore();
 
   useEffect(() => {
-    initKakao(); // 카카오 SDK 초기화
-
     const timer = setTimeout(() => {
       if (userProfile && character && autoLogin) {
         setScreen("home"); // 재방문 + 자동로그인 ON → 홈 바로

@@ -105,22 +105,27 @@ function QuestionRow({
 }
 
 export function HealthInfoScreen() {
-  const { setScreen, setUserProfile, setTokens, setIsAuthenticated, kakaoProfile, setKakaoProfile } =
+  const { setScreen, setUserProfile, setTokens, setIsAuthenticated, naverProfile, setNaverProfile } =
     useAppStore();
   const [step, setStep] = useState(1);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 카카오 로그인 경유 여부
-  const isKakao = !!kakaoProfile;
+  // 네이버 로그인 경유 여부
+  const isNaver = !!naverProfile;
+
+  // 네이버 성별('M'|'F') → 앱 내 성별('male'|'female') 변환
+  const naverGender: "male" | "female" | "" =
+    naverProfile?.gender === "M" ? "male" :
+    naverProfile?.gender === "F" ? "female" : "";
 
   const [formData, setFormData] = useState({
-    email: kakaoProfile?.email ?? "",
+    email: naverProfile?.email ?? "",
     password: "",
     passwordConfirm: "",
-    name: kakaoProfile?.name ?? "",
+    name: naverProfile?.name ?? "",
     age: "",
-    gender: (kakaoProfile?.gender ?? "") as "male" | "female" | "",
+    gender: naverGender as "male" | "female" | "",
     height: "",
     weight: "",
     highBp: null as boolean | null,
@@ -137,14 +142,14 @@ export function HealthInfoScreen() {
     diabetesStatus: "" as "1" | "2" | "unknown" | "none" | "",
   });
 
-  const [isEmailChecked, setIsEmailChecked] = useState(isKakao); // 카카오는 이메일 인증 생략
+  const [isEmailChecked, setIsEmailChecked] = useState(isNaver); // 네이버는 이메일 인증 생략
   const [emailMessage, setEmailMessage] = useState(
-    isKakao ? "카카오 계정 이메일이 자동으로 입력되었습니다." : "",
+    isNaver ? "네이버 계정 이메일이 자동으로 입력되었습니다." : "",
   );
 
-  const isPasswordValid = isKakao || formData.password.length >= 6;
+  const isPasswordValid = isNaver || formData.password.length >= 6;
   const passwordsMatch =
-    isKakao ||
+    isNaver ||
     (!!formData.password && formData.password === formData.passwordConfirm);
 
   const step1Valid =
@@ -251,7 +256,7 @@ export function HealthInfoScreen() {
     try {
       const res = await registerUser({
         email:             formData.email,
-        password:          formData.password || "kakao_no_password",
+        password:          formData.password || "naver_no_password",
         nickname:          formData.name,
         user_type:         userType,
         goal:              null,
@@ -307,7 +312,7 @@ export function HealthInfoScreen() {
         lastActiveDate: new Date(),
       });
 
-      setKakaoProfile(null);
+      setNaverProfile(null);
       if (formData.diabetesStatus === "none") setScreen("analysis");
       else setScreen("permissions");
 
@@ -392,13 +397,13 @@ export function HealthInfoScreen() {
                     placeholder="example@email.com"
                     value={formData.email}
                     onChange={handleEmailChange}
-                    disabled={isKakao}
+                    disabled={isNaver}
                     className={cn(
                       "flex-1 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
-                      isKakao && "opacity-60 cursor-not-allowed",
+                      isNaver && "opacity-60 cursor-not-allowed",
                     )}
                   />
-                  {!isKakao && (
+                  {!isNaver && (
                     <button
                       onClick={handleEmailCheck}
                       disabled={!formData.email || isEmailChecked || isEmailChecking}
@@ -436,12 +441,12 @@ export function HealthInfoScreen() {
                 )}
               </QuestionRow>
 
-              {/* 비밀번호 — 카카오 유저는 불필요하므로 숨김 */}
-              {isKakao ? (
-                <div className="flex items-center gap-2.5 bg-[#FFF9E6] rounded-xl px-3.5 py-3">
+              {/* 비밀번호 — 네이버 유저는 불필요하므로 숨김 */}
+              {isNaver ? (
+                <div className="flex items-center gap-2.5 bg-[#E8FFF0] rounded-xl px-3.5 py-3">
                   <span className="text-base">🔐</span>
-                  <p className="text-[12px] font-medium text-[#8C7010]">
-                    카카오 로그인 사용자는 비밀번호가 필요 없어요
+                  <p className="text-[12px] font-medium text-[#1A8A6A]">
+                    네이버 로그인 사용자는 비밀번호가 필요 없어요
                   </p>
                 </div>
               ) : (
@@ -513,11 +518,11 @@ export function HealthInfoScreen() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  disabled={isKakao && !!kakaoProfile?.name}
+                  disabled={isNaver && !!naverProfile?.name}
                   className={cn(
                     "mt-2.5 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
-                    isKakao &&
-                      kakaoProfile?.name &&
+                    isNaver &&
+                      naverProfile?.name &&
                       "opacity-60 cursor-not-allowed",
                   )}
                 />
@@ -527,8 +532,8 @@ export function HealthInfoScreen() {
               <QuestionRow
                 label="나이"
                 sub={
-                  isKakao && kakaoProfile?.ageRange
-                    ? `카카오 제공 연령대: ${kakaoProfile.ageRange}세`
+                  isNaver && naverProfile?.age
+                    ? `네이버 제공 연령대: ${naverProfile.age}세`
                     : undefined
                 }
               >
@@ -552,7 +557,7 @@ export function HealthInfoScreen() {
                   ]}
                   value={formData.gender}
                   onChange={(v) => setFormData({ ...formData, gender: v })}
-                  disabled={isKakao && !!kakaoProfile?.gender}
+                  disabled={isNaver && !!naverProfile?.gender}
                 />
               </QuestionRow>
             </div>

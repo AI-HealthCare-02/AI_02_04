@@ -25,14 +25,15 @@ interface AppState {
   refreshToken: string;
   setTokens: (access: string, refresh: string) => void;
 
-  kakaoProfile: {
-    id: number;
-    email: string;
-    name: string;
-    gender?: "male" | "female";
-    ageRange?: string;
+  naverProfile: {
+    id: string;
+    email?: string;
+    name?: string;
+    gender?: "M" | "F";
+    age?: string;
+    birthyear?: string;
   } | null;
-  setKakaoProfile: (profile: AppState["kakaoProfile"]) => void;
+  setNaverProfile: (profile: AppState["naverProfile"]) => void;
 
   userProfile: UserProfile | null;
   // ✨ 프로필 저장 시 맞춤형 미션도 함께 세팅되도록 변경
@@ -583,8 +584,8 @@ export const useAppStore = create<AppState>()(
       refreshToken: "",
       setTokens: (access, refresh) => set({ accessToken: access, refreshToken: refresh }),
 
-      kakaoProfile: null,
-      setKakaoProfile: (profile) => set({ kakaoProfile: profile }),
+      naverProfile: null,
+      setNaverProfile: (profile) => set({ naverProfile: profile }),
 
       userProfile: null,
 
