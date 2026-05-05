@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>네이버 로그인 처리 중...</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #f5f5f5;
+        color: #333;
+      }
+      .msg {
+        text-align: center;
+      }
+      .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #03c75a;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto 12px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="msg">
+      <div class="spinner"></div>
+      <p>네이버 로그인 처리 중...</p>
+    </div>
+    <script>
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("error")) {
+        window.opener?.postMessage(
+          { type: "NAVER_LOGIN", error: p.get("error") },
+          "*",
+        );
+      } else if (p.get("status") === "existing") {
+        window.opener?.postMessage(
+          {
+            type: "NAVER_LOGIN",
+            status: "existing",
+            accessToken: p.get("access_token"),
+            refreshToken: p.get("refresh_token"),
+          },
+          "*",
+        );
+      } else {
+        window.opener?.postMessage(
+          {
+            type: "NAVER_LOGIN",
+            status: "new",
+            naverId: p.get("naver_id"),
+            name: p.get("name"),
+            email: p.get("email"),
+            gender: p.get("gender"),
+            age: p.get("age"),
+            birthyear: p.get("birthyear"),
+          },
+          "*",
+        );
+      }
+      window.close();
+    </script>
+  </body>
+</html>
