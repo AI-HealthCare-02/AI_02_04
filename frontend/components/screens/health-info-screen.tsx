@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BackendUserType } from "@/lib/types";
-import { registerUser, checkEmail } from "@/lib/api/auth";
-import { setAuthToken, setRefreshToken } from "@/lib/api/client";
+import { registerUser, checkEmail, type AuthResponse } from "@/lib/api/auth";
+import { setAuthToken, setRefreshToken, client } from "@/lib/api/client";
 
 /* ── 공통 섹션 라벨 ── */
 function SectionLabel({
@@ -105,22 +105,36 @@ function QuestionRow({
 }
 
 export function HealthInfoScreen() {
-  const { setScreen, setUserProfile, setTokens, setIsAuthenticated, kakaoProfile, setKakaoProfile } =
-    useAppStore();
+  const {
+    setScreen,
+    setUserProfile,
+    setTokens,
+    setIsAuthenticated,
+    naverProfile,
+    setNaverProfile,
+  } = useAppStore();
   const [step, setStep] = useState(1);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 카카오 로그인 경유 여부
-  const isKakao = !!kakaoProfile;
+  // 네이버 로그인 경유 여부
+  const isNaver = !!naverProfile;
+
+  // 네이버 성별('M'|'F') → 앱 내 성별('male'|'female') 변환
+  const naverGender: "male" | "female" | "" =
+    naverProfile?.gender === "M"
+      ? "male"
+      : naverProfile?.gender === "F"
+        ? "female"
+        : "";
 
   const [formData, setFormData] = useState({
-    email: kakaoProfile?.email ?? "",
+    email: naverProfile?.email ?? "",
     password: "",
     passwordConfirm: "",
-    name: kakaoProfile?.name ?? "",
+    name: naverProfile?.name ?? "",
     age: "",
-    gender: (kakaoProfile?.gender ?? "") as "male" | "female" | "",
+    gender: naverGender as "male" | "female" | "",
     height: "",
     weight: "",
     highBp: null as boolean | null,
@@ -137,14 +151,14 @@ export function HealthInfoScreen() {
     diabetesStatus: "" as "1" | "2" | "unknown" | "none" | "",
   });
 
-  const [isEmailChecked, setIsEmailChecked] = useState(isKakao); // 카카오는 이메일 인증 생략
+  const [isEmailChecked, setIsEmailChecked] = useState(isNaver); // 네이버는 이메일 인증 생략
   const [emailMessage, setEmailMessage] = useState(
-    isKakao ? "카카오 계정 이메일이 자동으로 입력되었습니다." : "",
+    isNaver ? "네이버 계정 이메일이 자동으로 입력되었습니다." : "",
   );
 
-  const isPasswordValid = isKakao || formData.password.length >= 6;
+  const isPasswordValid = isNaver || formData.password.length >= 6;
   const passwordsMatch =
-    isKakao ||
+    isNaver ||
     (!!formData.password && formData.password === formData.passwordConfirm);
 
   const step1Valid =
@@ -225,7 +239,9 @@ export function HealthInfoScreen() {
 
     // physicalActivity "0-10" / "11-20" / "21-30" → 정수 (중간값)
     const exerciseFreqMap: Record<string, number> = {
-      "0-10": 5, "11-20": 15, "21-30": 25,
+      "0-10": 5,
+      "11-20": 15,
+      "21-30": 25,
     };
     const exerciseFreq = exerciseFreqMap[formData.physicalActivity] ?? null;
 
@@ -233,9 +249,11 @@ export function HealthInfoScreen() {
     let userType: "normal" | "risk" | "diabetes" = "normal";
     let diabetesType: "1type" | "2type" | null = null;
     if (formData.diabetesStatus === "1") {
-      userType = "diabetes"; diabetesType = "1type";
+      userType = "diabetes";
+      diabetesType = "1type";
     } else if (formData.diabetesStatus === "2") {
-      userType = "diabetes"; diabetesType = "2type";
+      userType = "diabetes";
+      diabetesType = "2type";
     } else if (formData.diabetesStatus === "unknown") {
       userType = "risk";
     }
@@ -243,76 +261,68 @@ export function HealthInfoScreen() {
     // 프론트 스토어용 healthType
     let initialHealthType: BackendUserType = "pending";
     if (userType === "diabetes") {
-      initialHealthType = formData.diabetesStatus === "1" ? "diabetic_1" : "diabetic_2";
+      initialHealthType =
+        formData.diabetesStatus === "1" ? "diabetic_1" : "diabetic_2";
     } else if (userType === "risk") {
       initialHealthType = "at_risk";
     }
-
+    // isNaver면 /auth/naver/register, 아니면 /auth/register 호출 (백엔드에서 각각 네이버 유저/일반 유저로 처리)
     try {
-      const res = await registerUser({
-        email:             formData.email,
-        password:          formData.password || "kakao_no_password",
-        nickname:          formData.name,
-        user_type:         userType,
-        goal:              null,
-        diabetes_type:     diabetesType,
-        gender:            genderInt,
-        age:               parseInt(formData.age),
-        height:            parseFloat(formData.height),
-        weight:            parseFloat(formData.weight),
-        is_hypertension:   formData.highBp!,
-        is_cholesterol:    formData.highCholesterol!,
-        is_heart_disease:  formData.heartDisease!,
-        walking_difficulty:formData.walkingDifficulty!,
-        general_health:    formData.generalHealth!,
-        alcohol_status:    formData.heavyDrinking!,
-        smoke_status:      formData.smoking,
-        exercise_freq:     exerciseFreq,
-        fruit_intake:      formData.dailyFruit,
-        veggie_intake:     formData.dailyVeggie,
-      });
+      const res = isNaver
+        ? await client.post<AuthResponse>("/auth/naver/register", {
+            naver_id: naverProfile!.id, // ← 반드시 추가
+            email: formData.email || undefined,
+            // password 없음
+            nickname: formData.name,
+            user_type: userType,
+            goal: null,
+            diabetes_type: diabetesType,
+            gender: genderInt,
+            age: parseInt(formData.age),
+            height: parseFloat(formData.height),
+            weight: parseFloat(formData.weight),
+            is_hypertension: formData.highBp!,
+            is_cholesterol: formData.highCholesterol!,
+            is_heart_disease: formData.heartDisease!,
+            walking_difficulty: formData.walkingDifficulty!,
+            general_health: formData.generalHealth!,
+            alcohol_status: formData.heavyDrinking!,
+            smoke_status: formData.smoking,
+            exercise_freq: exerciseFreq,
+            fruit_intake: formData.dailyFruit,
+            veggie_intake: formData.dailyVeggie,
+          })
+        : await registerUser({
+            // ← 기존 일반 회원가입은 else로
+            email: formData.email,
+            password: formData.password,
+            nickname: formData.name,
+            user_type: userType,
+            goal: null,
+            diabetes_type: diabetesType,
+            gender: genderInt,
+            age: parseInt(formData.age),
+            height: parseFloat(formData.height),
+            weight: parseFloat(formData.weight),
+            is_hypertension: formData.highBp!,
+            is_cholesterol: formData.highCholesterol!,
+            is_heart_disease: formData.heartDisease!,
+            walking_difficulty: formData.walkingDifficulty!,
+            general_health: formData.generalHealth!,
+            alcohol_status: formData.heavyDrinking!,
+            smoke_status: formData.smoking,
+            exercise_freq: exerciseFreq,
+            fruit_intake: formData.dailyFruit,
+            veggie_intake: formData.dailyVeggie,
+          });
 
-      // 토큰 저장
-      const { access_token, refresh_token } = res.data;
-      setAuthToken(access_token);
-      setRefreshToken(refresh_token);
-      setTokens(access_token, refresh_token);
-      setIsAuthenticated(true);
-
-      // 로컬 프로필 저장
-      setUserProfile({
-        id: String(res.data.user_id ?? crypto.randomUUID()),
-        email: formData.email,
-        name: formData.name,
-        age: parseInt(formData.age),
-        gender: formData.gender as "male" | "female",
-        height: parseFloat(formData.height),
-        weight: parseFloat(formData.weight),
-        highBp: formData.highBp!,
-        highCholesterol: formData.highCholesterol!,
-        heartDisease: formData.heartDisease!,
-        walkingDifficulty: formData.walkingDifficulty!,
-        generalHealth: formData.generalHealth!,
-        sickDays: formData.sickDays as any,
-        heavyDrinking: formData.heavyDrinking!,
-        physicalActivity: formData.physicalActivity as any,
-        dailyFruit: formData.dailyFruit!,
-        dailyVeggie: formData.dailyVeggie!,
-        smoking: formData.smoking!,
-        diabetesStatus: formData.diabetesStatus as any,
-        healthGoal: "건강한 생활 습관 만들기",
-        healthType: initialHealthType,
-        exp: 0,
-        streak: 0,
-        lastActiveDate: new Date(),
-      });
-
-      setKakaoProfile(null);
+      setNaverProfile(null);
       if (formData.diabetesStatus === "none") setScreen("analysis");
       else setScreen("permissions");
-
     } catch (err: any) {
-      setSubmitError(err?.message ?? "회원가입에 실패했습니다. 다시 시도해주세요.");
+      setSubmitError(
+        err?.message ?? "회원가입에 실패했습니다. 다시 시도해주세요.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -392,16 +402,18 @@ export function HealthInfoScreen() {
                     placeholder="example@email.com"
                     value={formData.email}
                     onChange={handleEmailChange}
-                    disabled={isKakao}
+                    disabled={isNaver}
                     className={cn(
                       "flex-1 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
-                      isKakao && "opacity-60 cursor-not-allowed",
+                      isNaver && "opacity-60 cursor-not-allowed",
                     )}
                   />
-                  {!isKakao && (
+                  {!isNaver && (
                     <button
                       onClick={handleEmailCheck}
-                      disabled={!formData.email || isEmailChecked || isEmailChecking}
+                      disabled={
+                        !formData.email || isEmailChecked || isEmailChecking
+                      }
                       className={cn(
                         "h-11 px-3.5 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors",
                         isEmailChecked
@@ -411,11 +423,19 @@ export function HealthInfoScreen() {
                     >
                       {isEmailChecking ? (
                         <div className="flex gap-0.5 px-1">
-                          {[0,1,2].map((i) => (
-                            <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i*150}ms` }} />
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              className="size-1.5 rounded-full bg-white animate-bounce"
+                              style={{ animationDelay: `${i * 150}ms` }}
+                            />
                           ))}
                         </div>
-                      ) : isEmailChecked ? "확인 완료" : "중복 확인"}
+                      ) : isEmailChecked ? (
+                        "확인 완료"
+                      ) : (
+                        "중복 확인"
+                      )}
                     </button>
                   )}
                 </div>
@@ -426,22 +446,24 @@ export function HealthInfoScreen() {
                     ) : (
                       <AlertCircle className="size-3.5 text-[#C0305A] shrink-0" />
                     )}
-                    <p className={cn(
-                      "text-[12px] font-medium",
-                      isEmailChecked ? "text-[#3E8C28]" : "text-[#C0305A]"
-                    )}>
+                    <p
+                      className={cn(
+                        "text-[12px] font-medium",
+                        isEmailChecked ? "text-[#3E8C28]" : "text-[#C0305A]",
+                      )}
+                    >
                       {emailMessage}
                     </p>
                   </div>
                 )}
               </QuestionRow>
 
-              {/* 비밀번호 — 카카오 유저는 불필요하므로 숨김 */}
-              {isKakao ? (
-                <div className="flex items-center gap-2.5 bg-[#FFF9E6] rounded-xl px-3.5 py-3">
+              {/* 비밀번호 — 네이버 유저는 불필요하므로 숨김 */}
+              {isNaver ? (
+                <div className="flex items-center gap-2.5 bg-[#E8FFF0] rounded-xl px-3.5 py-3">
                   <span className="text-base">🔐</span>
-                  <p className="text-[12px] font-medium text-[#8C7010]">
-                    카카오 로그인 사용자는 비밀번호가 필요 없어요
+                  <p className="text-[12px] font-medium text-[#1A8A6A]">
+                    네이버 로그인 사용자는 비밀번호가 필요 없어요
                   </p>
                 </div>
               ) : (
@@ -513,11 +535,11 @@ export function HealthInfoScreen() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  disabled={isKakao && !!kakaoProfile?.name}
+                  disabled={isNaver && !!naverProfile?.name}
                   className={cn(
                     "mt-2.5 h-11 bg-[#F5F5F5] border-0 rounded-xl text-[14px] font-medium placeholder:text-[#C8C8C8] focus-visible:ring-1 focus-visible:ring-[#87D57B]",
-                    isKakao &&
-                      kakaoProfile?.name &&
+                    isNaver &&
+                      naverProfile?.name &&
                       "opacity-60 cursor-not-allowed",
                   )}
                 />
@@ -527,8 +549,8 @@ export function HealthInfoScreen() {
               <QuestionRow
                 label="나이"
                 sub={
-                  isKakao && kakaoProfile?.ageRange
-                    ? `카카오 제공 연령대: ${kakaoProfile.ageRange}세`
+                  isNaver && naverProfile?.age
+                    ? `네이버 제공 연령대: ${naverProfile.age}세`
                     : undefined
                 }
               >
@@ -552,7 +574,7 @@ export function HealthInfoScreen() {
                   ]}
                   value={formData.gender}
                   onChange={(v) => setFormData({ ...formData, gender: v })}
-                  disabled={isKakao && !!kakaoProfile?.gender}
+                  disabled={isNaver && !!naverProfile?.gender}
                 />
               </QuestionRow>
             </div>
@@ -822,7 +844,9 @@ export function HealthInfoScreen() {
         {submitError && (
           <div className="max-w-md mx-auto mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5">
             <AlertCircle className="size-4 text-red-500 shrink-0" />
-            <p className="text-[12px] font-medium text-red-600">{submitError}</p>
+            <p className="text-[12px] font-medium text-red-600">
+              {submitError}
+            </p>
           </div>
         )}
         <div className="max-w-md mx-auto flex gap-3">
@@ -838,14 +862,22 @@ export function HealthInfoScreen() {
             onClick={handleNext}
             disabled={
               isSubmitting ||
-              (step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid)
+              (step === 1
+                ? !step1Valid
+                : step === 2
+                  ? !step2Valid
+                  : !step3Valid)
             }
             className="flex-1 h-14 rounded-2xl bg-[#87D57B] hover:bg-[#6DC462] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 text-[16px] font-bold text-white transition-colors"
           >
             {isSubmitting ? (
               <div className="flex gap-1">
-                {[0,1,2].map((i) => (
-                  <div key={i} className="size-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: `${i*150}ms` }} />
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="size-1.5 rounded-full bg-white animate-bounce"
+                    style={{ animationDelay: `${i * 150}ms` }}
+                  />
                 ))}
               </div>
             ) : (
