@@ -13,14 +13,14 @@ from app.routers import auth, user, health, challenge,character,dashboard, diet,
 
 sentry_sdk.init(
     dsn=settings.SENTRY_DSN,
-    integrations=[
+   integrations=[
         FastApiIntegration(),
         SqlalchemyIntegration(),
     ],
     traces_sample_rate=1.0,
+    send_default_pii=True,
     environment=settings.APP_ENV,
 )
-
 app = FastAPI(
     title="당마고치 API",
     version="1.0.0",
@@ -60,3 +60,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.get("/health")
 def health_check():
     return {"status": "ok", "env": settings.APP_ENV}
+
+@app.get("/sentry-test")
+def sentry_test():
+     raise Exception("Sentry 테스트 에러!")
