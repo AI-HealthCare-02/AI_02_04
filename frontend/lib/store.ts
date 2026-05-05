@@ -757,6 +757,7 @@ export const useAppStore = create<AppState>()(
           shopItems: defaultShopItems,
           graduatedCharacters: [],
           onboardingStep: 0,
+          naverProfile: null,   // 소셜 로그인 임시 데이터도 초기화
         }),
     }),
     {
@@ -780,7 +781,8 @@ export const useAppStore = create<AppState>()(
         return persisted;
       },
       partialize: (state) => {
-        const { currentScreen, isAuthenticated, ...rest } = state;
+        // naverProfile은 회원가입 흐름의 임시 데이터이므로 localStorage에 저장하지 않음
+        const { currentScreen, isAuthenticated, naverProfile, ...rest } = state;
         return rest;
       },
     },
