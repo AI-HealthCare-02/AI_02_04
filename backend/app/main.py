@@ -12,12 +12,12 @@ from app.routers import auth, user, health, challenge,character,dashboard, diet,
 
 
 sentry_sdk.init(
-    dsn = settings.SENTRY_DSN,
-    intergrations =[
-        FastApiIntegration (),
-        SqlalchemyIntegration()
+    dsn=settings.SENTRY_DSN,
+    integrations=[
+        FastApiIntegration(),
+        SqlalchemyIntegration(),
     ],
-    traces_sample_rate= 1.0,
+    traces_sample_rate=1.0,
     environment=settings.APP_ENV,
 )
 
