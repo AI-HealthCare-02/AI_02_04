@@ -3,13 +3,18 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 import pytest
 import uuid
+import os
 from unittest.mock import patch, AsyncMock
+from slowapi.util import get_remote_address
+from slowapi import Limiter
 
 
 from app.main import app
 from app.core.database import get_db, Base
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
+
+os.environ["TESTING"] = "true"
 
 engine = create_engine(
     SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -87,9 +92,17 @@ def auth_client(client, register_payload):
 
     return client
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 @pytest.fixture(autouse=True)
 def disable_rate_limit():
-    with patch("app.core.limiter.limiter._storage") as mock_storage:
-        mock_storage.get.return_value = 0
-        mock_storage.incr.return_value = 1
-        yield
+    from app.main import app
+    original_limiter = app.state.limiter
+    
+    test_limiter = Limiter(key_func=get_remote_address, default_limits=[])
+    app.state.limiter = test_limiter
+    
+    yield
+    
+    app.state.limiter = original_limiter

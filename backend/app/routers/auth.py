@@ -5,7 +5,8 @@ import httpx
 from datetime import datetime
 import time
 
-from app.core.limiter import limiter
+
+from app.core.limiter import limiter,get_rate_limit
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.schemas.auth import (
@@ -28,7 +29,7 @@ security = HTTPBearer()
 
 
 @router.post("/register", status_code=201)
-@limiter.limit("3/minute")
+@limiter.limit(get_rate_limit("3/minute"))
 def register(request: Request, data: RegisterRequest, db: Session = Depends(get_db)):
     try:
         user = auth_service.register_user(db, data)
@@ -56,7 +57,7 @@ def register(request: Request, data: RegisterRequest, db: Session = Depends(get_
 
 
 @router.post("/login")
-@limiter.limit("5/minute")
+@limiter.limit(get_rate_limit("5/minute"))
 def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
 
     try:
