@@ -37,3 +37,6 @@ lightgbm==4.3.0
 slowapi
 redis[asyncio]
 locust
+
+
+sentry-sdk[fastapi]==2.0.0
