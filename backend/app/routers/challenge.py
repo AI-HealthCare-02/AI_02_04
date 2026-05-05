@@ -65,7 +65,7 @@ async def log_challenge(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    await delete_cache(f"challenges: {user_id}")
+    await delete_cache(f"challenges:{current_user['user_id']}")
     return {"success": True, "data": result}
 
 
