@@ -2,6 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 import pytest
+import uuid
+from unittest.mock import patch, AsyncMock
+
 
 from app.main import app
 from app.core.database import get_db, Base
@@ -29,6 +32,8 @@ def db_session():
     finally:
         session.rollback()
         session.close()
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
 
 
 @pytest.fixture
@@ -47,7 +52,7 @@ def client(db_session):
 @pytest.fixture
 def register_payload():
     return {
-        "email": "test@test.com",
+        "email": f"test{uuid.uuid4()}@test.com",
         "password": "test1234",
         "nickname": "테스터",
         "user_type": "normal",
@@ -77,7 +82,14 @@ def auth_client(client, register_payload):
     )
 
     token = response.json()["data"]["access_token"]
-
+    print(response.json())
     client.headers.update({"Authorization": f"Bearer {token}"})
 
     return client
+
+@pytest.fixture(autouse=True)
+def disable_rate_limit():
+    with patch("app.core.limiter.limiter._storage") as mock_storage:
+        mock_storage.get.return_value = 0
+        mock_storage.incr.return_value = 1
+        yield

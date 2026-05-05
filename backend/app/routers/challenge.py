@@ -1,45 +1,53 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
+import json
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.services import challenge as challenge_service
 from app.schemas.challenge import ChallengeLogRequest
-
+from app.core.redis import set_cache, get_cache, delete_cache
 router = APIRouter()
 
 
 @router.get("")
-def get_challenges(
+async def get_challenges(
     current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     user_id = current_user["user_id"]
+    cache_key = f"challenges:{user_id}"
+    
+    cached = await get_cache(cache_key)
+    if cached:
+        return {"success": True, "data": json.loads(cached)}
+    
     challenges = challenge_service.get_challenges(db, user_id)
-
-    return {
-        "success": True,
-        "data": [
-            {
-                "challenge_id": c.id,
-                "name": c.name,
-                "category": c.category,
-                "target_value": c.target_value,
-                "target_unit": c.target_unit,
-                "points": c.points,
-                "grade": c.grade.value,
-                "difficulty": c.difficulty.value,
-                "completion_rate": c.completion_rate,
-                "redesign_count": c.redesign_count,
-                "challenge_type": c.challenge_type.value,
-            }
-            for c in challenges
-        ],
-    }
+    
+    data = [
+        {
+            "challenge_id": c.id,
+            "name": c.name,
+            "category": c.category,
+            "target_value": c.target_value,
+            "target_unit": c.target_unit,
+            "points": c.points,
+            "grade": c.grade.value,
+            "difficulty": c.difficulty.value,
+            "completion_rate": c.completion_rate,
+            "redesign_count": c.redesign_count,
+            "challenge_type": c.challenge_type.value,
+        }
+        for c in challenges
+    ]
+    
+    await set_cache(cache_key, json.dumps(data), 300)
+    
+    return {"success": True, "data": data}
 
 
 @router.post("/{challenge_id}/log", status_code=201)
-def log_challenge(
+async def log_challenge(
     challenge_id: int,
     data: ChallengeLogRequest,
     current_user: dict = Depends(get_current_user),
@@ -57,6 +65,7 @@ def log_challenge(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+    await delete_cache(f"challenges: {user_id}")
     return {"success": True, "data": result}
 
 

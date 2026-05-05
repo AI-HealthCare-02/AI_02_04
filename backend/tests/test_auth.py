@@ -42,3 +42,27 @@ def test_login_wrong_password(client, register_payload):
         json={"email": register_payload["email"], "password": "wrongpassword"},
     )
     assert response.status_code == 401
+
+
+def test_login_invalid_token(client):
+    client.headers.update({"Authorization": "Bearer thisisaninvalidtoken1234"})
+    response = client.get("/users/me")
+    assert response.status_code == 401
+
+
+def test_refresh_token_success(client, register_payload):
+    client.post("/auth/register", json=register_payload)
+
+    response = client.post("/auth/login", json={
+        "email": register_payload["email"],
+        "password" : register_payload["password"]
+   })
+
+    refresh_token = response.json()["data"]["refresh_token"]
+
+    response = client.post("/auth/refresh",json={
+        "refresh_token" : refresh_token
+   })
+
+    assert response.status_code == 200
+    

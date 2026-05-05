@@ -29,3 +29,24 @@ async def is_blacklisted(token: str) -> bool:
         return result is not None
     except Exception:
         return False  
+
+async def get_cache(key: str):
+    try:
+        client = get_redis_client()
+        result = await client.get(key)
+        return result  # None이면 캐시 미스, 값 있으면 캐시 히트
+    except Exception:
+        return None
+
+async def set_cache(key: str, value: str, ttl: int):
+    try:
+        client = get_redis_client()
+        await client.setex(key, ttl, value)
+    except Exception:
+        pass
+async def delete_cache(key: str):
+    try:
+        client = get_redis_client()
+        await client.delete(key)
+    except Exception:
+        pass

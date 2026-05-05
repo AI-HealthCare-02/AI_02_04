@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import httpx
 from datetime import datetime
+import time
 
 from app.core.limiter import limiter
 from app.core.database import get_db
@@ -18,6 +19,7 @@ from app.schemas.auth import (
 )
 from app.services import auth as auth_service
 from app.core.config import settings
+from app.core.redis import add_blacklist
 from jose import jwt, JWTError
 from app.models.user import User
 
@@ -115,13 +117,19 @@ def refresh(data: RefreshRequest, db: Session = Depends(get_db)):
 @router.get("/check-email")
 def check_email(email: str = Query(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
+
     return {"success": True, "data": {"available": True if not user else False}}
 
 
 @router.post("/signout")
-def signout(current_user: dict = Depends(get_current_user)):
+async def signout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: dict = Depends(get_current_user)
+):
+    token = credentials.credentials
+    expire_seconds = current_user["payload"]["exp"] - int(time.time())
+    await add_blacklist(token, expire_seconds)
     return {"success": True, "message": "로그아웃 되었습니다."}
-
 
 @router.get("/kakao/login")
 def kakao_login():
@@ -309,10 +317,10 @@ async def delete_user(
     token = credentials.credentials
     payload = current_user["payload"]
 
-    # exp = payload = payload.get("exp")
-    # now = int(datetime.utcnow().timestamp())
-    # ttl = exp - now
-    # if ttl >0:
-    #     await add_to_blacklist(token, ttl)
+    exp = payload = payload.get("exp")
+    now = int(datetime.utcnow().timestamp())
+    ttl = exp - now
+    if ttl >0:
+        await add_blacklist(token, ttl)
 
     return {"success": True, "message": "회원탈퇴 완료 "}
