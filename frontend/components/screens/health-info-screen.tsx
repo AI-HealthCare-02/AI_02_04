@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import {
@@ -220,6 +220,11 @@ export function HealthInfoScreen() {
       setIsEmailChecking(false);
     }
   };
+
+  // 단계 전환 시 스크롤 최상단으로 이동
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [step]);
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
