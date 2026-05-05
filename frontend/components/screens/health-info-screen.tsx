@@ -316,6 +316,41 @@ export function HealthInfoScreen() {
             veggie_intake: formData.dailyVeggie,
           });
 
+      // 토큰 저장
+      const { access_token, refresh_token } = res.data;
+      setAuthToken(access_token);
+      setRefreshToken(refresh_token);
+      setTokens(access_token, refresh_token);
+      setIsAuthenticated(true);
+
+      // 로컬 프로필 저장
+      setUserProfile({
+        id: String(res.data.user_id ?? crypto.randomUUID()),
+        email: formData.email,
+        name: formData.name,
+        age: parseInt(formData.age),
+        gender: formData.gender as "male" | "female",
+        height: parseFloat(formData.height),
+        weight: parseFloat(formData.weight),
+        highBp: formData.highBp!,
+        highCholesterol: formData.highCholesterol!,
+        heartDisease: formData.heartDisease!,
+        walkingDifficulty: formData.walkingDifficulty!,
+        generalHealth: formData.generalHealth!,
+        sickDays: formData.sickDays as any,
+        heavyDrinking: formData.heavyDrinking!,
+        physicalActivity: formData.physicalActivity as any,
+        dailyFruit: formData.dailyFruit!,
+        dailyVeggie: formData.dailyVeggie!,
+        smoking: formData.smoking!,
+        diabetesStatus: formData.diabetesStatus as any,
+        healthGoal: "건강한 생활 습관 만들기",
+        healthType: initialHealthType,
+        exp: 0,
+        streak: 0,
+        lastActiveDate: new Date(),
+      });
+
       setNaverProfile(null);
       if (formData.diabetesStatus === "none") setScreen("analysis");
       else setScreen("permissions");
