@@ -207,7 +207,7 @@ export function LoginScreen() {
 
         {/* 회원가입 */}
         <Button
-          onClick={() => setScreen("health-info")}
+          onClick={() => { setNaverProfile(null); setScreen("health-info"); }}
           variant="outline"
           className="w-full h-13 text-[16px] font-bold rounded-2xl bg-card border-1 border-border text-foreground hover:bg-muted transition-colors"
         >
