@@ -1,7 +1,7 @@
 from locust import HttpUser, task, between
 
 class DangmagoUser(HttpUser):
-    wait_time = between(1,3)
+    wait_time = between(3,5)
     token = None
 
     def on_start(self):
