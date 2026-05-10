@@ -1,21 +1,26 @@
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { setAuthToken, setRefreshToken } from "@/lib/api/client";
 import { Character } from "@/components/character";
 export function SplashScreen() {
-  const { setScreen, userProfile, character, autoLogin } = useAppStore();
+  const { setScreen, setIsAuthenticated, userProfile, character, accessToken, refreshToken } = useAppStore();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (userProfile && character && autoLogin) {
-        setScreen("home"); // 재방문 + 자동로그인 ON → 홈 바로
+      if (userProfile && character && accessToken) {
+        // 저장된 토큰이 있으면 → 자동 로그인 복원 후 홈으로
+        setAuthToken(accessToken);
+        if (refreshToken) setRefreshToken(refreshToken);
+        setIsAuthenticated(true);
+        setScreen("home");
       } else if (userProfile && character) {
-        setScreen("login"); // 재방문 + 자동로그인 OFF → 로그인
+        setScreen("login"); // 토큰 없는 재방문자 → 로그인
       } else {
         setScreen("onboarding"); // 신규 유저 (프로필 없음) → 온보딩
       }
     }, 2500);
     return () => clearTimeout(timer);
-  }, [setScreen, userProfile, character, autoLogin]);
+  }, [setScreen, setIsAuthenticated, userProfile, character, accessToken, refreshToken]);
 
   return (
     <div className="min-h-screen bg-[#F9FFEF] flex flex-col items-center justify-center px-6">
